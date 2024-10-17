@@ -1,5 +1,6 @@
 import express, {Request, Response} from 'express'
 import tutorRabbitMqClient from './rabbitMQ/client'
+import courseRabbitMqClient from '../course/rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'
 import { register } from 'module'
 import jwt from 'jsonwebtoken';
@@ -20,6 +21,8 @@ const s3Client = new S3Client({
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
     },
 });
+
+
 
 
 
@@ -121,7 +124,7 @@ export const tutorController ={
 
         if(result.success == true){
 
-                const payload = {id:result.tutorData._id, email : result.tutorData.email,role:"tutor"}
+                const payload = {id:result.tutorData._doc._id, email : result.tutorData._doc.email,role:"tutor"}
 
               const {accessToken,refreshToken} = jwtCreate(payload)
 
@@ -132,7 +135,8 @@ export const tutorController ={
                 return res.json({
                     success: true,
                     message: 'Login successful',
-                    userId: result.userId,
+                    tutorData:result.tutorData._doc,
+                    tutorId: result.tutorData._doc._id,
                     role: result.role,
                     tutorAccessToken : accessToken,
                     tutorRefreshToken : refreshToken
@@ -266,7 +270,7 @@ export const tutorController ={
 
             if(result.success == true){
 
-                    const payload = {id:result.tutor_data._id, email : result.tutor_data.email,role:"tutor"}
+                    const payload = {id:result.tutorData._doc._id, email : result.tutorData._doc.email,role:"tutor"}
 
                   const {accessToken,refreshToken} = jwtCreate(payload)
 
@@ -277,7 +281,8 @@ export const tutorController ={
                   return res.json({
                     success: true,
                     message: 'Login successful',
-                    tutorId: result.tutor_data._id,
+                    tutorId: result.tutorData._doc._id,
+                    tutorData:result.tutorData._doc,
                     role: "user",
                     tutorAccessToken: accessToken, 
                     tutoeRefreshToken: refreshToken 
@@ -298,48 +303,205 @@ export const tutorController ={
     },
 
    
-    getPresignedUrlForUpload : async (req: Request, res: Response) => {
+
+    
+    getPresignedUrlForUpload: async (req: Request, res: Response) => {
         try {
-            const { filename, fileType } = req.query as { filename: string; fileType: string; };
-    
-            console.log('S3_BUCKET_NAME:', process.env.S3_BUCKET_NAME);
-    
-            // Validate filename and fileType query parameters
-            if (typeof filename !== 'string' || typeof fileType !== 'string') {
-                return res.status(400).json({ error: 'Filename and fileType query parameters are required and should be strings.' });
-            }
-    
-            // Map fileType to content type
-            let contentType = 'application/octet-stream';  // Default content type
-            if (fileType === 'image') {
-                contentType = 'image/jpeg';
-            } else if (fileType === 'video') {
-                contentType = 'video/mp4'; // Adjust if necessary for different video types
-            }
-    
-            // Generate a unique file key in S3 using the provided filename
-            const fileKey = `uploads/${Date.now()}_${filename}`;
-    
-            // Create a command to put object in S3
-            const command = new PutObjectCommand({
-                Bucket: process.env.S3_BUCKET_NAME!,
-                Key: fileKey,
-                ContentType: contentType, // Set the content type for the uploaded file
-            });
-    
-            // Generate a presigned URL valid for 1 hour
-            const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-    
-            console.log('Presigned URL generated:', url);
-    
-            // Return the presigned URL and the file key for further use
-            return res.json({ url, key: fileKey });
+          const { filename, fileType } = req.query;
+      
+          if (!filename || !fileType) {
+            return res.status(400).json({ error: 'Filename and fileType are required.' });
+          }
+      
+          const contentType = fileType === 'video' ? 'video/mp4' : 'application/octet-stream';
+          const fileKey = `uploads/${Date.now()}_${filename}`; // This generates a unique key for each upload
+      
+          // Create a command for uploading the file
+          const command = new PutObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: fileKey,
+            ContentType: contentType,
+          });
+     
+          // Generate a presigned URL for the upload
+          const uploadUrl = await getSignedUrl(s3Client, command, {
+            expiresIn: 3600, // URL expires in 1 hour
+          });
+      
+          // Generate a presigned URL for viewing the video
+          const viewCommand = new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: fileKey,
+          });
+      
+          const viewUrl = await getSignedUrl(s3Client, viewCommand, {
+            expiresIn: 3600, // URL expires in 1 hour
+          });
+      
+          console.log('Presigned URL for upload:', uploadUrl);
+          console.log('Presigned URL for viewing:', viewUrl);
+          console.log('file key gggggg', fileKey);
+          
+          // Send both the presigned URL for uploading, viewing URL, and the S3 key back to the front end
+          return res.json({ uploadUrl, viewUrl, key: fileKey });
         } catch (error) {
-            console.error('Error generating presigned URL:', error);
-            return res.status(500).json({ error: 'Could not generate presigned URL' });
+          console.error('Error generating presigned URLs:', error);
+          return res.status(500).json({ error: 'Failed to generate presigned URLs' });
+        }
+      },
+
+
+
+      myCourses: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { tutorId } = req.params;
+            const operation = "tutor-courses";
+
+            const data = {
+                tutorId:tutorId
+            }
+
+            const result: any = await courseRabbitMqClient.produce(data,operation);
+            console.log("resuylteeee", result);
+            
+
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in google login");
         }
     },
 
+
+    listCourse: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { courseId } = req.params;
+            const operation = "tutor-courses-list";
+
+            const data = {
+                courseId:courseId
+            }
+
+            const result: any = await courseRabbitMqClient.produce(data,operation);
+            console.log("resuylteeee", result);
+            
+
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in google login");
+        }
+    },
+
+
+
+    fetchEditCourse: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { courseId } = req.params;
+            const operation = "tutor-edit-course";
+
+            const data = {
+                courseId:courseId
+            }
+
+            const result: any = await courseRabbitMqClient.produce(data,operation);
+            console.log("resuylteeee", result);
+            
+
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in google login");
+        }
+    },
+
+
+    editProfile: async (req: Request, res: Response) => {
+        try {
+            console.log("Entered to the edit user",req.body)
+            console.log(req.file, '=============userController for edit profile image');
+            const image = req.file as Express.Multer.File | undefined;
+            const data = req.body
+
+            const validImageMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+
+            if (image) {
+                // Check if the uploaded file has a valid MIME type
+                if (!validImageMimeTypes.includes(image.mimetype)) {
+                    return res.status(400).json({ error: "Only image files are allowed" });
+                }
+            }
+
+
+            console.log(image, '-----------image in API gateway');
+    
+            const operation = 'tutor-edit_profile'
+
+            const result: any = await tutorRabbitMqClient.produce({ image, data},operation)
+
+            console.log(result, 'edit ------------ profile ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+
+    getSignedUrl: async (req: Request, res: Response) => {
+        try {
+            console.log("my signed url -------------------------", );
+            const { imageKey } = req.body;
+
+            const params = {
+                Bucket: process.env.S3_BUCKET_NAME!, // Ensure this env variable is set correctly
+                Key: imageKey
+              };
+            
+              // Generate the pre-signed URL with expiry time
+              const command = new GetObjectCommand(params);
+              const seconds = 10 ; // Set the expiry duration
+              const url = await getSignedUrl(s3Client, command, { expiresIn: seconds });
+            
+            //   return url;
+            
+            return res.json(url);
+        } catch (error) {
+            console.log(error, "error in google login");
+        }
+    },
+
+
     
 
+    getTutorDetails: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { tutorId } = req.params;
+            const operation = 'tutor-details';
+
+            const data = {
+                tutorId:tutorId
+            }
+
+            const result: any = await tutorRabbitMqClient.produce(data,operation);
+            console.log("resuylteeee", result);
+            
+
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in google login");
+        }
+    },
+
+
+
+
 }
+
+

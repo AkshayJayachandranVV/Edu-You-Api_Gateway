@@ -12,5 +12,6 @@ adminRouter.get("/students", authenticationToken('admin'), adminController.stude
 adminRouter.post("/isBlocked", authenticationToken('admin'), adminController.isBlocked);
 adminRouter.get("/tutors", authenticationToken('admin'), adminController.tutors);
 adminRouter.post("/tutorIsBlocked", authenticationToken('admin'), adminController.tutorsIsBlocked);
-
+adminRouter.get("/courses", authenticationToken('admin'), adminController.courses);
+adminRouter.post("/listCourse", authenticationToken('admin'), adminController.listCourses);
 export { adminRouter };

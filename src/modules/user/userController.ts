@@ -1,11 +1,23 @@
 import express, {Request, Response} from 'express'
 import userRabbitMqClient from './rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'
+import courseRabbitMqClient from '../course/rabbitMQ/client'
+import paymentRabbitMqClient from '../payment/rabbitMQ/client'
+import orderRabbitMqClient from '../order/rabbitMQ/client'
+import tutorRabbitMqClient from '../tutor/rabbitMQ/client'
+import { client } from './grpc/services/client';
+import * as grpc from '@grpc/grpc-js';
 import { register } from 'module'
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+
+interface GrpcError extends Error {
+    details?: string; // Adding details property
+}
+
 
 
 
@@ -80,52 +92,146 @@ export const useController ={
         }
     },
 
-    login : async(req : Request, res : Response) =>{
-        try {
+    // login : async(req : Request, res : Response) =>{
+    //     try {
             
-            console.log("Entered to the login user",req.body)
+    //         console.log("Entered to the login user",req.body)
 
-            const data = req.body
+    //         const data = req.body
 
-            const operation = 'login_user'
+    //         const operation = 'login_user'
 
-            const result: any = await userRabbitMqClient.produce(data,operation)
+    //         const result: any = await userRabbitMqClient.produce(data,operation)
 
-            console.log(result, 'successfully logged in');
+    //         console.log(result, 'successfully logged in');
 
-            if(result.success == true){
+    //         if(result.success == true){
 
-                    const payload = {id:result.userData._doc._id, email : result.userData._doc.email,role:"user"}
+    //                 const payload = {id:result.userData._doc._id, email : result.userData._doc.email,role:"user"}
 
-                    console.log(payload ,"here important id and email")
+    //                 console.log(payload ,"here important id and email")
 
-                  const {accessToken,refreshToken} = jwtCreate(payload)
+    //               const {accessToken,refreshToken} = jwtCreate(payload)
 
-                  console.log(accessToken,refreshToken ,"got the token")
+    //               console.log(accessToken,refreshToken ,"got the token")
 
   
 
-                  return res.json({
-                    success: true,
-                    message: 'Login successful',
-                    userData:result.userData._doc,
-                    userId: result.userId,
-                    role: result.role,
-                    userAccessToken: accessToken, 
-                    userRefreshToken: refreshToken 
-                });
+    //               return res.json({
+    //                 success: true,
+    //                 message: 'Login successful',
+    //                 userData:result.userData._doc,
+    //                 userId: result.userId,
+    //                 role: result.role,
+    //                 userAccessToken: accessToken, 
+    //                 userRefreshToken: refreshToken 
+    //             });
                 
 
-            }
+    //         }
 
-            return res.json(result)
+    //         return res.json(result)
 
+    //     } catch (error) {
+    //         return res.status(500).json({
+    //             success: false,
+    //             message: "Internal Server Error. Please try again later."
+    //         })
+
+    //     }
+    // },
+
+
+    // login: async (req: Request, res: Response) => {
+    //     try {
+    //         console.log("Entered login user", req.body);
+    //         const data = req.body;
+    
+    //         const requestPayload = {
+    //             email: data.email,
+    //             password: data.password,
+    //         };
+    
+    //         console.log("Request Payload:", requestPayload);
+    
+    //         client.UserLogin(requestPayload, (error: GrpcError | null, result: any) => {
+    //             if (error) {
+    //                 console.error("gRPC error:", error);
+    //                 return res.status(500).json({
+    //                     success: false,
+    //                     message: "Internal Server Error. Please try again later.",
+    //                     error: error.details || error.message, // Use error.details directly
+    //                 });
+    //             }
+    
+    //             if (result && result.success) {
+    //                 console.log(result, 'successfully logged in');
+    
+    //                 const payload = { id: result.userId, email: data.email, role: "user" };
+    //                 const { accessToken, refreshToken } = jwtCreate(payload);
+    
+    //                 return res.json({
+    //                     success: true,
+    //                     message: 'Login successful',
+    //                     userId: result.userId,
+    //                     role: "user",
+    //                     userAccessToken: accessToken,
+    //                     userRefreshToken: refreshToken
+    //                 });
+    //             } else {
+    //                 console.log("Login failed. Result:", result);
+    //                 return res.status(401).json({
+    //                     success: false,
+    //                     message: 'Invalid email or password'
+    //                 });
+    //             }
+    //         });
+    //     } catch (error) {
+    //         console.error("Error during login:", error);
+    //         return res.status(500).json({
+    //             success: false,
+    //             message: "Internal Server Error. Please try again later.",
+    //             error: (error as Error).message, // Cast to Error to access message
+    //         });
+    //     }
+    // },
+
+    login: async (req: Request, res: Response) => {
+        try {
+            console.log("Entered login user");
+  
+
+            client.login( {},(error: GrpcError | null, result: any) => {
+                if (error) {
+                    console.error("gRPC error:", error);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Internal Server Error. Please try again later.",
+                        error: error.details || error.message, // Use error.details directly
+                    });
+                }
+    
+                if (result && result.success) {
+                    return res.json({
+                        success: true,
+                        message: 'Login successful',
+                    });
+                } else {
+                    return res.status(401).json({
+                        success: false,     
+                        message: 'Invalid email or password',
+                    });
+                }
+            });
+    
+            
         } catch (error) {
+            console.error("Error during login:", error);
             return res.status(500).json({
                 success: false,
-                message: "Internal Server Error. Please try again later."
-            })
-
+                message: "Internal Server Error. Please try again later.",
+                error: (error as Error).message, // Cast to Error to access message
+            });
         }
     },
 
@@ -311,10 +417,130 @@ export const useController ={
                 message: "Internal Server Error. Please try again later."
             })
         }
-    }
+    },
 
 
+    courseDetails : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the courseDetails user")
+
+            const { courseId } = req.params; 
+
+            const data = {
+                courseId:courseId
+            }
     
+            const operation = 'course-details'
+
+            const result: any = await courseRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'course-------details ----------user ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    allCourses : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the all courses user")
+            const data = ""
+    
+            const operation = 'all-courses'
+
+            const result: any = await courseRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'course-------details ----------user ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    payment : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the payment mode")
+            const data = req.body
+    
+            const operation = 'course-payment'
+
+            const result: any = await paymentRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'course-------details ----------user ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    orderSuccess : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the payment mode")
+            const data = req.body
+    
+            // const operation = 'order-save'
+
+            const result: any = await orderRabbitMqClient.produce(data,'order-save')
+            const result2: any = await userRabbitMqClient.produce(data,'update-my-course')
+            const result3: any = await tutorRabbitMqClient.produce(data,'update-course-students')
+
+            console.log(result, 'course-------details ----------user ');
+
+            console.log(result2)
+            console.log(result3)
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    getTutorDetails: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { tutorId } = req.params;
+            const operation = 'tutor-details';
+
+            const data = {
+                tutorId:tutorId
+            }
+
+            const result: any = await tutorRabbitMqClient.produce(data,operation);
+            console.log("resuylteeee", result);
+            
+
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in google login");
+        }
+    },
 
 }
 

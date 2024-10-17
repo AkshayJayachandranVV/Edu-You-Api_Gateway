@@ -56,6 +56,31 @@ export const courseController ={
         }
     },
 
+    editCourse : async(req : Request, res : Response) => {
+        try {
+            
+            console.log("entered --------------------- to the course part")
+
+            const data = req.body;
+            const operation ='edit-course'
+
+            console.log(req.body, 'body data')
+
+
+            const result: any = await courseRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'course result ---------edit thumbnail ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
 }
 
 

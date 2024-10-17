@@ -13,26 +13,27 @@ interface JwtPayload {
 }
 
 
-export const jwtCreate = (payload : JwtPayload) => {
+export const jwtCreate = (payload: JwtPayload) => {
+  const { id, email, role } = payload;
 
-    const {id,email,role} = payload
+  console.log(id, email, role, " gooooooooooooooooooot the id and email");
 
+  try {
+    const accessToken = jwt.sign(
+      { userId: id, email: email, role }, // Include any necessary user data
+      JWT_SECRET,
+      { expiresIn: '1d' } // Access token expires in 1 day
+    );
 
-    console.log(id,email,role, " gooooooooooooooooooot the id and email")
+    const refreshToken = jwt.sign(
+      { userId: id, email: email, role },
+      JWT_REFRESH_SECRET,
+      { expiresIn: '7d' } // Refresh token expires in 7 days
+    );
 
-
-    
-const accessToken = jwt.sign(
-    { userId: id, email: email,role}, // Include any necessary user data
-    JWT_SECRET,
-    { expiresIn: '15m' } // Access token expires in 15 minutes
-  );
-
-  const refreshToken = jwt.sign(
-    { userId: id, email : email,role},
-    JWT_REFRESH_SECRET,
-    { expiresIn: '7d' } // Refresh token expires in 7 days
-  );
-
-  return {accessToken,refreshToken}
-}
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error("Error creating JWT:", error);
+    throw new Error("Failed to create JWT tokens");
+  }
+};

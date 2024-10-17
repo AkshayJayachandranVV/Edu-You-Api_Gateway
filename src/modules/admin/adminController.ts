@@ -2,7 +2,8 @@ import express, {Request, Response} from 'express'
 import adminRabbitMqClient from './rabbitMQ/client'
 import userRabbitMqClient from '../user/rabbitMQ/client'
 import tutorRabbitMqClient from '../tutor/rabbitMQ/client'
-import {jwtCreate} from '../../jwt/jwtCreate'
+import courseRabbitMqClient from '../course/rabbitMQ/client'
+import {jwtCreate} from '../../jwt/jwtCreate'  
 
 
 export const adminController ={
@@ -134,6 +135,54 @@ export const adminController ={
             const result: any = await tutorRabbitMqClient.produce(data,operation)
 
             console.log(result, 'admin result ------------- isBlocked-------tutors ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    courses : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the tutors list ")
+    
+            const operation = 'admin-courses'
+
+            const result: any = await courseRabbitMqClient.produce('',operation)
+
+            // console.log(result, 'admin result ------------- total-------tutors ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    listCourses : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the tutors list ")
+    
+            const operation = 'admin-courses-list'
+
+            console.log(req.body,"---------------req.body in listCourses")
+
+            const data = req.body
+
+            const result: any = await courseRabbitMqClient.produce(data,operation)
+
+            // console.log(result, 'admin result ------------- total-------tutors ');
 
             return res.json(result)
             

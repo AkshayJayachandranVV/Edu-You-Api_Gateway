@@ -13,12 +13,15 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.657.0",
     "@aws-sdk/s3-request-presigner": "^3.657.0",
+    "@grpc/grpc-js": "^1.12.2",
     "amqplib": "^0.10.4",
     "config": "^3.3.12",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "exponential-backoff": "^3.1.1",
     "express": "^4.19.2",
+    "grpc-tools": "^1.12.4",
     "jsonwebtoken": "^9.0.2",
     "logger": "^0.0.1",
     "multer": "^1.4.5-lts.1",
@@ -26,6 +29,7 @@
     "winston": "^3.14.2"
   },
   "devDependencies": {
+    "@grpc/proto-loader": "^0.7.13",
     "@types/amqplib": "^0.10.5",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
@@ -34,6 +38,7 @@
     "@types/multer": "^1.4.12",
     "@types/node": "^22.4.2",
     "ts-node": "^10.9.2",
+    "ts-proto": "^2.2.4",
     "typescript": "^5.5.4"
   }
 }

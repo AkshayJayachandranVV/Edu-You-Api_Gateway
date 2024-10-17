@@ -22,8 +22,11 @@ userRouter.post('/resetPassword',useController.resetPassword)
 userRouter.post('/google_login',useController.googleLogin)
 userRouter.put('/profile',authencticateToken('user'),upload.single('profile_picture'),useController.profile)
 userRouter.post('/',authencticateToken)
-
-
+userRouter.get('/courseDetails/:courseId',authencticateToken('user'),useController.courseDetails)
+userRouter.get('/allCourses',authencticateToken('user'),useController.allCourses)
+userRouter.post('/payment',useController.payment)
+userRouter.post('/orderSuccess',useController.orderSuccess)
+userRouter.get("/getTutorDetails/:tutorId",authencticateToken('user'),useController.getTutorDetails)
 
 
 

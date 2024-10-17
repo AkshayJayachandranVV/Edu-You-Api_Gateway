@@ -1,5 +1,7 @@
 import express,{Request , Response} from "express";
 import {tutorController} from './tutorController'; 
+import authencticateToken from '../../middleware/authMiddleware';
+import upload from '../../multer/multer'
 
 
 const tutorRouter = express.Router()
@@ -13,8 +15,12 @@ tutorRouter.post("/forgotOtpVerify",tutorController.forgotOtpVerify)
 tutorRouter.post("/resetPassword",tutorController.resetPassword)
 tutorRouter.post("/google_login",tutorController.tutorGoogleLogin)
 tutorRouter.get("/getPresignedUrlForUpload",tutorController.getPresignedUrlForUpload)
-// tutorRouter.get("/getSignedUrl",tutorController.getSignedUrl)
-
+tutorRouter.get("/myCourses/:tutorId",authencticateToken('tutor'),tutorController.myCourses)
+tutorRouter.get("/listCourse/:courseId",authencticateToken('tutor'),tutorController.listCourse)
+tutorRouter.get("/fetchEditCourse/:courseId",authencticateToken('tutor'),tutorController.fetchEditCourse)
+tutorRouter.put("/editProfile",authencticateToken('tutor'),upload.single('profile_picture'),tutorController.editProfile)
+tutorRouter.post("/getSignedUrlId",tutorController.getSignedUrl)
+tutorRouter.get("/getTutorDetails/:tutorId",tutorController.getTutorDetails)
 
 
 export {tutorRouter}

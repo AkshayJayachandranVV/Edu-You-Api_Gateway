@@ -16,16 +16,19 @@ const authenticationToken = (requiredRole: string) => {
     }
 
     console.log('Token found, verifying...');
+
+    // Verify the token
     jwt.verify(token, config.jwt_key as string, (err, decoded) => {
-      const decodedToken = jwt.decode(token);
-      console.log('Decoded Token:', decodedToken);
-
       if (err) {
-        console.log('Invalid token', err);
-        return res.status(403).json({ success: false, message: 'Invalid token' });
+        // Handle token expiration or invalid token
+        if (err.name === 'TokenExpiredError') {
+          console.log('Token expired', err);
+          return res.status(401).json({ success: false, message: 'Token expired' });
+        } else {
+          console.log('Invalid token', err);
+          return res.status(403).json({ success: false, message: 'Invalid token' });
+        }
       }
-
-      console.log('Token is valid:', decoded);
 
       // Assuming the token contains userId, email, and role
       if (decoded && typeof decoded !== 'string') {
