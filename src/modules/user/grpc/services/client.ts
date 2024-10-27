@@ -1,26 +1,24 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
-import config from '../../../../config/config';
 
 const USER_PROTO_PATH = path.resolve(__dirname, '../proto/user.proto');
 
-const userPackageDefinition = protoLoader.loadSync(USER_PROTO_PATH,{
-    keepCase:true,
+const userPackageDefinition = protoLoader.loadSync(USER_PROTO_PATH, {
+    keepCase: true,
     longs: String,
-    enums:String,
-    defaults:true,
-    oneofs:true,
+    enums: String,
+    defaults: true,
+    oneofs: true,
 });
 
 const userProtoDescription = grpc.loadPackageDefinition(userPackageDefinition) as any;
 
 const userProto = userProtoDescription.user;
 
-const client = new userProto.UserService(
-    'localhost:4001',
+const userClient = new userProto.UserService(
+    '0.0.0.0:4001',
     grpc.credentials.createInsecure()
 );
 
-export {client}
-
+export { userClient };

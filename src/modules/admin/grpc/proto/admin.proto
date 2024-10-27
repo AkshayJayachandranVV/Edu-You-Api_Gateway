@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package admin;
+
+service AdminService {
+    rpc login (LoginAdminRequest) returns (LoginAdminResponse);
+}
+
+message LoginAdminRequest {
+    string email = 1;      // Admin's email
+    string password = 2;   // Admin's password
+}
+
+message LoginAdminResponse {
+    bool success = 1;      // Indicates if the login was successful
+    string message = 2;    // Message describing the login result
+}

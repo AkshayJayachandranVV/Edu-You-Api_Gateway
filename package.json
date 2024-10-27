@@ -14,6 +14,7 @@
     "@aws-sdk/client-s3": "^3.657.0",
     "@aws-sdk/s3-request-presigner": "^3.657.0",
     "@grpc/grpc-js": "^1.12.2",
+    "@types/socket.io": "^3.0.2",
     "amqplib": "^0.10.4",
     "config": "^3.3.12",
     "cookie-parser": "^1.4.6",
@@ -26,6 +27,7 @@
     "logger": "^0.0.1",
     "multer": "^1.4.5-lts.1",
     "nodemon": "^3.1.4",
+    "socket.io": "^4.8.0",
     "winston": "^3.14.2"
   },
   "devDependencies": {

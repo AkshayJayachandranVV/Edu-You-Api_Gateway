@@ -7,7 +7,7 @@ import upload from '../../multer/multer'
 const tutorRouter = express.Router()
 
 tutorRouter.post("/register",tutorController.register)
-tutorRouter.post("/verifyOtp",tutorController.otp)
+tutorRouter.post("/verifyOtp",tutorController.verifyOtp)
 tutorRouter.post("/resendOtp",tutorController.resendOtp)
 tutorRouter.post("/login",tutorController.login)
 tutorRouter.post("/forgotPassword",tutorController.forgotPassword)
@@ -21,8 +21,8 @@ tutorRouter.get("/fetchEditCourse/:courseId",authencticateToken('tutor'),tutorCo
 tutorRouter.put("/editProfile",authencticateToken('tutor'),upload.single('profile_picture'),tutorController.editProfile)
 tutorRouter.post("/getSignedUrlId",tutorController.getSignedUrl)
 tutorRouter.get("/getTutorDetails/:tutorId",tutorController.getTutorDetails)
-
-
+tutorRouter.get("/payouts/:tutorId",authencticateToken('tutor'),tutorController.payouts)
+tutorRouter.get("/courseStudents/:courseId",authencticateToken('tutor'),tutorController.courseStudents)
 export {tutorRouter}
 
 

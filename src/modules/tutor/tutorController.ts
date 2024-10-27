@@ -1,14 +1,23 @@
 import express, {Request, Response} from 'express'
 import tutorRabbitMqClient from './rabbitMQ/client'
 import courseRabbitMqClient from '../course/rabbitMQ/client'
+import userRabbitMqClient from '../user/rabbitMQ/client'
+import orderRabbitMqClient from '../order/rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'
+import { tutorClient } from './grpc/services/client';
+import { getS3SignedUrl } from '../../s3SignedUrl/grtS3SignedUrl'
 import { register } from 'module'
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 
+
 dotenv.config();
 
+
+interface GrpcError extends Error {
+    details?: string; // Adding details property
+}
 
 import { S3Client, GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3'
 
@@ -28,66 +37,105 @@ const s3Client = new S3Client({
 
 export const tutorController ={
 
-    register: async (req:Request, res:Response) => {
-        try{
-
-            console.log("entered --------------------- to the tutor aoi")
-
-            const data = req.body;
-            const operation ='register_tutor'
-
-            console.log(req.body, 'body data')
-
-            const result: any = await tutorRabbitMqClient.produce(data, operation);
-            console.log(result, 'register-tutor');
-               
-            return res.json(result)
-            // res.status(200).json({success: true, message: 'sample test'})       
-
-        }catch(error){
-            console.log("problem with the register in api gatewwayy")
-        }
-    },
-
-    otp : async (req:Request, res:Response) =>{
+    register: async (req: Request, res: Response) => {
         try {
-            console.log("entered --------------------- to the tutor otp ")
-            const data = req.body;
-            const operation ='tutor-verify_otp'
-
-            const result: any = await tutorRabbitMqClient.produce(data, operation);
-
-            console.log(result, 'verified otp');
-
-            if(result && result.success){
-
-                return res.json({
-                    success: true,
-                    message:  "OTP verified. Tutor registered successfully",
-                });
-
-            }else{
-
-                console.log("eneterd into the ELSE CASE OGTHE API GATEWAY ",result.message)
-
-                if(result.message == "Incorrect Otp"){
-                    return res.json({
-                        success: false,
-                        message:  "Incorrect Otp",
-                    });
-                }else{
+            console.log("Entered tutor registration", req.body);
+    
+            const data = req.body; // Get the registration data from the request body
+    
+            // Call the gRPC register method for the tutor
+            tutorClient.register(data, (error: GrpcError | null, result: any) => {
+                if (error) {
+                    console.error("gRPC error:", error);
                     return res.status(500).json({
                         success: false,
-                        message: "User registration failed. Please try again."
+                        message: "Internal Server Error. Please try again later.",
+                        error: error.details || error.message, // Use error.details directly
                     });
                 }
-
-            }
-
+    
+                console.log(result, 'registration result');
+    
+                // Check if the registration was successful
+                if (result && result.success) {
+                    // Return successful registration response
+                    return res.json({
+                        success: true,
+                        message: result.message || 'Registration successful. Verify the OTP to complete registration.',
+                        tutorData: result.tutorData, // Include tutorData from the gRPC response
+                        tempId: result.tempId // Assuming tempId is returned for OTP verification
+                    });
+                } else {
+                    // Handle registration failure
+                    return res.json({
+                        success: false,
+                        message: result.message || 'Registration failed. Please try again.',
+                    });
+                }
+            });
+    
         } catch (error) {
-            console.log("problem with the register in api gatewwayy")
+            console.error("Error during tutor registration:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later.",
+                error: (error as Error).message, // Cast to Error to access message
+            });
         }
     },
+    
+
+    verifyOtp: async (req: Request, res: Response) => {
+        try {
+            console.log("Entered tutor OTP verification with request body", req.body);
+    
+            const data = req.body; // Extract data from request body
+    
+            // Call the gRPC verifyOtp method for tutor
+            tutorClient.verifyOtp(data, (error: GrpcError | null, result: any) => {
+                if (error) {
+                    console.error("gRPC error:", error);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Internal Server Error. Please try again later.",
+                        error: error.details || error.message,
+                    });
+                }
+    
+                console.log(result, 'OTP verification result for tutor');
+    
+                // Check if the OTP verification was successful
+                if (result && result.success) {
+                    return res.json({
+                        success: true,
+                        message: "OTP verified. Tutor registered successfully",
+                    });
+                } else {
+                    // Handle cases for incorrect OTP or registration failure
+                    if (result.message === 'Incorrect OTP') {
+                        return res.json({
+                            success: false,
+                            message: "Incorrect Otp",
+                        });
+                    } else {
+                        return res.status(500).json({
+                            success: false,
+                            message: "Tutor registration failed. Please try again.",
+                        });
+                    }
+                }
+            });
+    
+        } catch (error) {
+            console.error("Error during tutor OTP verification:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later.",
+                error: (error as Error).message, // Cast error to access its message
+            });
+        }
+    },
+    
 
     resendOtp : async(req : Request , res : Response) =>{
         try {
@@ -109,51 +157,116 @@ export const tutorController ={
         }
   },
 
-  login : async(req : Request, res : Response) =>{
-    try {
+//   login : async(req : Request, res : Response) =>{
+//     try {
         
-        console.log("Entered to the login user",req.body)
+//         console.log("Entered to the login user",req.body)
 
-        const data = req.body
+//         const data = req.body
 
-        const operation = 'login_tutor'
+//         const operation = 'login_tutor'
 
-        const result: any = await tutorRabbitMqClient.produce(data,operation)
+//         const result: any = await tutorRabbitMqClient.produce(data,operation)
 
-        console.log(result, 'successfully logged in');
+//         console.log(result, 'successfully logged in');
 
-        if(result.success == true){
+//         if(result.success == true){
 
-                const payload = {id:result.tutorData._doc._id, email : result.tutorData._doc.email,role:"tutor"}
+//                 const payload = {id:result.tutorData._doc._id, email : result.tutorData._doc.email,role:"tutor"}
 
-              const {accessToken,refreshToken} = jwtCreate(payload)
+//               const {accessToken,refreshToken} = jwtCreate(payload)
 
-              console.log(accessToken,refreshToken,"got the tokensss")
+//               console.log(accessToken,refreshToken,"got the tokensss")
 
 
 
+//                 return res.json({
+//                     success: true,
+//                     message: 'Login successful',
+//                     tutorData:result.tutorData._doc,
+//                     tutorId: result.tutorData._doc._id,
+//                     role: result.role,
+//                     tutorAccessToken : accessToken,
+//                     tutorRefreshToken : refreshToken
+//                   });
+
+//         }
+
+//         return res.json(result)
+
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal Server Error. Please try again later."
+//         })
+
+//     }
+// },
+
+
+login: async (req: Request, res: Response) => {
+    try {
+        console.log("Entered to the login tutor", req.body);
+
+        const data = req.body; // Get the login data from the request body
+
+        // Call the gRPC login method for tutors
+        tutorClient.login(data, (error: GrpcError | null, result: any) => {
+            if (error) {
+                console.error("gRPC error:", error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Internal Server Error. Please try again later.",
+                    error: error.details || error.message, // Use error.details directly
+                });
+            }
+
+            console.log(result, 'successfully logged in');
+
+            // Check if the login was successful
+            if (result && result.success) {
+                // Create payload for JWT
+                const payload = {
+                    id: result.tutorData.id,  // Accessing the tutor ID from the result
+                    email: result.tutorData.email,
+                    role: result.role
+                };
+
+                console.log(payload, "here important tutor id and email");
+
+                // Generate tokens
+                const { accessToken, refreshToken } = jwtCreate(payload);
+                console.log(accessToken, refreshToken, "got the tokens");
+
+                // Return successful login response
                 return res.json({
                     success: true,
                     message: 'Login successful',
-                    tutorData:result.tutorData._doc,
-                    tutorId: result.tutorData._doc._id,
+                    tutorData: result.tutorData, // Include tutorData from the gRPC response
+                    tutorId: result.tutorData.id, // Assuming tutorData contains id
                     role: result.role,
-                    tutorAccessToken : accessToken,
-                    tutorRefreshToken : refreshToken
-                  });
-
-        }
-
-        return res.json(result)
+                    tutorAccessToken: accessToken,
+                    tutorRefreshToken: refreshToken
+                });
+            } else {
+                // Handle invalid email or password
+                return res.json({
+                    success: false,
+                    message: result.message || 'Invalid email or password',
+                });
+            }
+        });
 
     } catch (error) {
+        console.error("Error during login:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal Server Error. Please try again later."
-        })
-
+            message: "Internal Server Error. Please try again later.",
+            error: (error as Error).message, // Cast to Error to access message
+        });
     }
 },
+
 
     forgotPassword : async(req : Request, res : Response) => {
         try {
@@ -228,79 +341,131 @@ export const tutorController ={
 
     googleLogin: async (req: Request, res: Response) => {
         try {
-            console.log("dddddddddddddddddddddd", req.body);
-
-            const { credential } = req.body;
-            const operation = "google_login";
-            const result: any = await tutorRabbitMqClient.produce(
-                { credential },
-                operation
-            );
-            console.log("resuylteeee", result);
-            if (result.success) {
-                const { accessToken, refreshToken } = jwtCreate({
-                    id: result.user._id,
-                    email: result.user.email,
-                    role:"tutor"
-                });
-
-              
-            }
-
-            return res.json(result);
+            console.log("Entered googleLogin tutor", req.body);
+    
+            const data = req.body; // Get the login data from the request body
+    
+            // Call the gRPC googleLogin method for tutors
+            tutorClient.googleLogin(data, (error: GrpcError | null, result: any) => {
+                if (error) {
+                    console.error("gRPC error:", error);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Internal Server Error. Please try again later.",
+                        error: error.details || error.message, // Use error.details directly
+                    });
+                }
+    
+                console.log(result, 'successfully google logged in tutor');
+    
+                // Check if the login was successful
+                if (result && result.success) {
+                    // Create payload for JWT
+                    const payload = { 
+                        id: result.tutor_data._id, 
+                        email: result.tutor_data.email,
+                        role: "tutor" // Assuming role as "tutor"
+                    };
+    
+                    console.log(payload, "here important id and email for tutor");
+    
+                    // Generate tokens
+                    const { accessToken, refreshToken } = jwtCreate(payload);
+                    console.log(accessToken, refreshToken, "got the tokens for tutor");
+    
+                    // Return successful login response
+                    return res.json({
+                        success: true,
+                        message: 'Login successful',
+                        tutorId: result.tutor_data._id, // Assuming tutor_data contains _id
+                        tutor_data: result.tutor_data,  // Include tutor_data from the gRPC response
+                        role: "tutor",
+                        tutorAccessToken: accessToken, 
+                        tutorRefreshToken: refreshToken 
+                    });
+                } else {
+                    // Handle failure response from gRPC
+                    return res.json({
+                        success: false,
+                        message: result.message || 'Google login failed',
+                    });
+                }
+            });
         } catch (error) {
-            console.log(error, "error in google login");
-        }
-    },
-
-
-
-    tutorGoogleLogin : async(req : Request, res : Response) =>{
-        try {
-            
-            console.log("Entered to the goooogle login TUTOR",req.body)
-
-            const data = req.body;
-
-            const operation = 'google-login_tutor'
-
-            const result: any = await tutorRabbitMqClient.produce(data,operation)
-
-            console.log(result, 'successfully google logged in');
-
-            if(result.success == true){
-
-                    const payload = {id:result.tutorData._doc._id, email : result.tutorData._doc.email,role:"tutor"}
-
-                  const {accessToken,refreshToken} = jwtCreate(payload)
-
-                  console.log(accessToken,refreshToken ,"got the token")
-
-  
-
-                  return res.json({
-                    success: true,
-                    message: 'Login successful',
-                    tutorId: result.tutorData._doc._id,
-                    tutorData:result.tutorData._doc,
-                    role: "user",
-                    tutorAccessToken: accessToken, 
-                    tutoeRefreshToken: refreshToken 
-                });
-                
-
-            }
-
-            return res.json(result)
-
-        } catch (error) {
+            console.error("Error during googleLogin for tutor:", error);
             return res.status(500).json({
                 success: false,
-                message: "Internal Server Error. Please try again later."
-            })
-
+                message: "Internal Server Error. Please try again later.",
+                error: (error as Error).message, // Cast to Error to access message
+            });
         }
     },
+    
+
+
+
+    tutorGoogleLogin: async (req: Request, res: Response) => {
+        try {
+            console.log("Entered googleLogin for tutor", req.body);
+    
+            const data = req.body; // Get the login data from the request body
+    
+            // Call the gRPC googleLogin method for tutor
+            tutorClient.googleLogin(data, (error: GrpcError | null, result: any) => {
+                if (error) {
+                    console.error("gRPC error during tutor google login:", error);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Internal Server Error. Please try again later.",
+                        error: error.details || error.message, // Use error.details if available
+                    });
+                }
+    
+                console.log(result, 'successfully google logged in as tutor');
+    
+                // Check if the login was successful
+                if (result && result.success) {
+                    // Create payload for JWT
+                    const payload = { 
+                        id: result.tutor_data.id, 
+                        email: result.tutor_data.email,
+                        role: "tutor" // Assuming role as "tutor"
+                    };
+    
+                    console.log(payload, "here important id and email");
+    
+                    // Generate tokens
+                    const { accessToken, refreshToken } = jwtCreate(payload);
+                    console.log(accessToken, refreshToken, "got the tokens");
+    
+                    // Return successful login response
+                    return res.json({
+                        success: true,
+                        message: 'Login successful',
+                        tutorId: result.tutor_data.id, // Assuming tutor_data contains _id
+                        tutor_data: result.tutor_data,  // Include tutor_data from the gRPC response
+                        role: "tutor",
+                        tutorAccessToken: accessToken, 
+                        tutorRefreshToken: refreshToken 
+                    });
+                } else {
+                    // Handle failure response from gRPC
+                    return res.json({
+                        success: false,
+                        message: result.message || 'Google login failed',
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("Error during tutor google login:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later.",
+                error: (error as Error).message, // Cast to Error to access message
+            });
+        }
+    },
+    
 
    
 
@@ -499,6 +664,74 @@ export const tutorController ={
         }
     },
 
+
+
+    payouts: async (req: Request, res: Response) => {
+        try {
+            console.log("course payouts ------------------------------", req.params);
+        
+            const operation = 'order-tutor-payouts';
+            const data = req.params;
+            
+            // Fetch the payout data from RabbitMQ
+            const result: any = await orderRabbitMqClient.produce(data, operation);
+    
+            // Map over each order item in result and convert S3 key to signed URL for thumbnail
+            if (result && result.orders) {
+                const updatedOrders = await Promise.all(result.orders.map(async (order: any) => {
+                    const signedThumbnailUrl = await getS3SignedUrl(order.thumbnail);
+                    return {
+                        ...order,
+                        thumbnail: signedThumbnailUrl,  // Replace with signed URL
+                    };
+                }));
+                
+                // Attach updated orders back to result
+                result.orders = updatedOrders;
+            }
+    
+            return res.json(result);
+        } catch (error) {
+            console.log(error, "error in payouts");
+            return res.status(500).json({ message: "Internal server error" });
+        }
+    },
+    
+
+
+    courseStudents: async (req: Request, res: Response) => {
+        try {
+            console.log("my courses tutor", req.params);
+            const { courseId } = req.params;
+            const operation = 'tutor-course-students';
+    
+            const data = {
+                courseId: courseId
+            };
+    
+            // First RabbitMQ call to fetch student list from the tutor service
+            const result: any = await tutorRabbitMqClient.produce(data, operation);
+            console.log("result from tutor service:------------------------", result);
+    
+            // Handle the case when no students are found
+            if (!result || !result.students || result.students.length === 0) {
+                return res.json({ success: false, message: "No students enrolled for this course." });
+            }
+    
+            const operation2 = 'tutor-user-details';
+            // Fetch additional user details for the found students
+            const result2: any = await userRabbitMqClient.produce(result.students.students, operation2);
+            console.log("result from user service:", result2);
+    
+            // Return the student data along with user details
+            return res.json({ success: true, students: result2 });
+        } catch (error) {
+            console.log(error, "error in courseStudents function");
+            return res.status(500).json({ success: false, message: "An error occurred while fetching students." });
+        }
+    },
+    
+    
 
 
 

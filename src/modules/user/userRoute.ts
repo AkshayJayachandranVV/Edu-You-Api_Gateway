@@ -27,8 +27,11 @@ userRouter.get('/allCourses',authencticateToken('user'),useController.allCourses
 userRouter.post('/payment',useController.payment)
 userRouter.post('/orderSuccess',useController.orderSuccess)
 userRouter.get("/getTutorDetails/:tutorId",authencticateToken('user'),useController.getTutorDetails)
-
+userRouter.get("/getCourses/:userId",authencticateToken('user'),useController.getUserCourses)
+userRouter.get("/fetchChat",authencticateToken('user'),useController.fetchChat)
+userRouter.post("/sendFile",authencticateToken('user'),upload.single('file'),useController.sendFile)
 
 
 
 export {userRouter}
+

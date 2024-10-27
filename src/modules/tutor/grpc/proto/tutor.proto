@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package tutor;
+
+service TutorService {
+    rpc login (LoginTutorRequest) returns (LoginTutorResponse);
+    rpc register (RegisterTutorRequest) returns (RegisterTutorResponse);
+    rpc verifyOtp (VerifyOtpTutorRequest) returns (VerifyOtpTutorResponse);
+    rpc googleLogin (GoogleLoginTutorRequest) returns (GoogleLoginTutorResponse);
+}
+
+// Define the TutorData message
+message TutorData {
+    string id = 1;                     // Tutor's unique identifier
+    string tutorname = 2;              // Tutor's name
+    string email = 3;                  // Tutor's email address
+    string phone = 4;                  // Tutor's phone number
+    string profile_picture = 5;        // Tutor's profile picture URL
+    string password = 6;               // Tutor's password (hashed)
+    string createdAt = 7;              // Tutor's creation date
+    string about = 8;                  // Tutor's about/description
+    bool isBlocked = 9;                // Tutor's status, whether blocked or not
+    repeated CourseData courses = 10;  // List of courses created by the tutor
+}
+
+// Define the CourseData message
+message CourseData {
+    string courseId = 1;               // Course's unique identifier
+    repeated string students = 2;      // List of student IDs enrolled in the course
+}
+
+message GoogleLoginTutorRequest {
+    string email = 1;
+    string fullname = 2;
+}
+message GoogleLoginTutorResponse {
+    bool success = 1;
+    string message = 2;
+    TutorData tutor_data = 3;
+}
+
+message VerifyOtpTutorRequest {
+    string otp = 1;
+    string id = 2; // The ID of the temporary user
+}
+message VerifyOtpTutorResponse {
+    string message = 1;
+    bool success = 2;
+    TutorData tutor_data = 3;
+}
+
+message RegisterTutorRequest {
+    string tutorname = 1;  // Tutor's name
+    string email = 2;      // Tutor's email address
+    string password = 3;   // Tutor's password
+}
+message RegisterTutorResponse {
+    string message = 1;      
+    bool success = 2;        
+    bool forgotPass = 3;     
+    TutorData tutorData = 4; 
+    string tempId = 5;       
+}
+
+
+
+// Define the request and response for login
+message LoginTutorRequest {
+    string email = 1;
+    string password = 2;
+}
+message LoginTutorResponse {
+    bool success = 1;                  // Indicates if the login was successful
+    string message = 2;                // Message indicating the login status
+    string role = 3;                   // Role of the user (tutor in this case)
+    TutorData tutorData = 4;           // Include the tutor's data in the response
+}
