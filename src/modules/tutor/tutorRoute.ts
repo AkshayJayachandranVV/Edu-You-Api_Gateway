@@ -23,6 +23,9 @@ tutorRouter.post("/getSignedUrlId",tutorController.getSignedUrl)
 tutorRouter.get("/getTutorDetails/:tutorId",tutorController.getTutorDetails)
 tutorRouter.get("/payouts/:tutorId",authencticateToken('tutor'),tutorController.payouts)
 tutorRouter.get("/courseStudents/:courseId",authencticateToken('tutor'),tutorController.courseStudents)
+tutorRouter.get("/getPresignedUrl",tutorController.getPresignedUrl)
+tutorRouter.get("/cardsData/:tutorId",tutorController.cardsData)
+tutorRouter.get("/graphData/:tutorId",tutorController.graphData)
 export {tutorRouter}
 
 

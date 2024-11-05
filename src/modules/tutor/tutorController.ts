@@ -730,9 +730,93 @@ login: async (req: Request, res: Response) => {
             return res.status(500).json({ success: false, message: "An error occurred while fetching students." });
         }
     },
+
+
+    getPresignedUrl : async (req: Request, res: Response) => {
+        try {
+            const s3Key = req.query.s3Key as string;
+            if (!s3Key) {
+                return res.status(400).json({ error: 's3Key query parameter is required' });
+            }
+    
+            const params = {
+                Bucket: process.env.S3_BUCKET_NAME!,
+                Key: s3Key,
+            };
+    
+            const command = new GetObjectCommand(params);
+            const url = await getSignedUrl(s3Client, command, { expiresIn:604800 });
+    
+            return res.json({ url });
+        } catch (error) {
+            console.error("Error generating pre-signed URL:", error);
+            return res.status(500).json({ error: 'Failed to generate pre-signed URL' });
+        }
+    },
     
     
 
+    cardsData: async (req: Request, res: Response) => {
+        try {
+            console.log("Fetching tutor data:", req.params);
+            const data = req.params;
+            console.log(data)
+            const operationEarnings = 'tutor-total-earning';
+            const operationCardsData = 'tutor-cards-data';
+    
+            // Call both RabbitMQ clients to retrieve data
+            const resultEarnings: any = await orderRabbitMqClient.produce(data, operationEarnings);
+            // console.log("first reply",resultEarnings)
+            const resultCardsData: any = await tutorRabbitMqClient.produce(data, operationCardsData);
+            // console.log("sedon reply",resultCardsData)
+    
+            // Combine the two results
+
+            console.log(resultCardsData,resultEarnings)
+            const combinedResult = {
+                earningsData: resultEarnings,
+                cardsData: resultCardsData,
+            };
+    
+            return res.json(combinedResult);
+        } catch (error) {
+            console.log(error, "Error in cardsData");
+            res.status(500).json({ error: "Failed to retrieve tutor data" });
+        }
+    },
+    
+   
+    graphData: async (req: Request, res: Response) => {
+        try {
+            console.log("Fetching tutor data:", req.params);
+            const data = req.params;
+            console.log(data)
+            const operation1 = 'tutor-bargraph-data';
+            const operation2 = 'tutor-piegraph-data';
+            const operation3 = 'tutor-fetch-graphCourses';
+    
+            // Call both RabbitMQ clients to retrieve data
+            const resultBar: any = await orderRabbitMqClient.produce(data, operation1);
+            console.log("first reply",resultBar)
+            const resultPie: any = await tutorRabbitMqClient.produce(data,operation2);
+            console.log("sedon reply",resultPie)
+            const PieFetchCourse: any = await courseRabbitMqClient.produce(resultPie,operation3);
+    
+            // Combine the two results
+
+            console.log("00000000000000000000000000",resultBar,PieFetchCourse,"--------------------------------------")
+            const combinedResult = {
+                barGraph: resultBar,
+                pieGraph: PieFetchCourse,
+            };
+    
+            return res.json(combinedResult);
+        } catch (error) {
+            console.log(error, "Error in cardsData");
+            res.status(500).json({ error: "Failed to retrieve tutor data" });
+        }
+    }
+   
 
 
 }

@@ -28,8 +28,13 @@ userRouter.post('/payment',useController.payment)
 userRouter.post('/orderSuccess',useController.orderSuccess)
 userRouter.get("/getTutorDetails/:tutorId",authencticateToken('user'),useController.getTutorDetails)
 userRouter.get("/getCourses/:userId",authencticateToken('user'),useController.getUserCourses)
-userRouter.get("/fetchChat",authencticateToken('user'),useController.fetchChat)
+userRouter.get("/fetchChat", authencticateToken('user'), useController.fetchChat);
 userRouter.post("/sendFile",authencticateToken('user'),upload.single('file'),useController.sendFile)
+userRouter.get("/myCourse/:userId",authencticateToken('user'),useController.myCourse)
+userRouter.get('/courseView/:courseId',authencticateToken('user'),useController.courseView)
+userRouter.post('/report',authencticateToken('user'),useController.report)
+userRouter.get('/fetchNotify',authencticateToken('user'),useController.fetchNotify)
+userRouter.get('/updateReadStatus',authencticateToken('user'),useController.updateReadStatus)
 
 
 

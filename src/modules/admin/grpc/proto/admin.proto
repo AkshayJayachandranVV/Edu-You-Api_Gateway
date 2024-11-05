@@ -11,7 +11,15 @@ message LoginAdminRequest {
     string password = 2;   // Admin's password
 }
 
+// Define the structure of the admin data returned in the response
+message AdminData {
+    string id = 1;             // Admin's ID
+    string email = 2;          // Admin's email
+    string role = 3;           // Admin's role
+}
+
 message LoginAdminResponse {
-    bool success = 1;      // Indicates if the login was successful
-    string message = 2;    // Message describing the login result
+    bool success = 1;          // Indicates if the login was successful
+    string message = 2;        // Message describing the login result
+    AdminData adminData = 3;   // Data of the logged-in admin
 }

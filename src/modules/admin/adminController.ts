@@ -40,7 +40,7 @@ export const adminController ={
                     const payload = {
                         id: result.adminData.id,  // Accessing the admin ID from the result
                         email: result.adminData.email,
-                        role: result.role
+                        role: result.adminData.role
                     };
     
                     console.log(payload, "here important admin id and email");
@@ -199,6 +199,32 @@ export const adminController ={
             console.log("Entered to the tutors list ")
     
             const operation = 'admin-courses-list'
+
+            console.log(req.body,"---------------req.body in listCourses")
+
+            const data = req.body
+
+            const result: any = await courseRabbitMqClient.produce(data,operation)
+
+            // console.log(result, 'admin result ------------- total-------tutors ');
+
+            return res.json(result)
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+    reportCourses : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the tutors list ")
+    
+            const operation = 'admin-report-courses'
 
             console.log(req.body,"---------------req.body in listCourses")
 
