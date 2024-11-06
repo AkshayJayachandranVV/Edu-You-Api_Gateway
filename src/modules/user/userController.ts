@@ -833,14 +833,66 @@ updateReadStatus: async (req: Request, res: Response) => {
         console.error("Error in fetchNotify:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
-}
+},
 
   
+
+updateReadUsers: async (req: Request, res: Response) => {
+  try {
+      console.log("nokikee kookiee------------------------------", req.query);
+
+      const data = req.query;
+
+      const operation = 'update-read-users';
+
+      const result: any = await chatRabbitMqClient.produce(data, operation);
+
+      console.log(result,"result ------------ of the chats")
+    
+      return res.json(result);
+      
+  } catch (error) {
+      console.error("Error in fetchNotify:", error);
+      return res.status(500).json({ message: "Internal server error" });
+  }
+},
+
+
+
+fetchGroupMembers: async (req: Request, res: Response) => {
+  try {
+      console.log("fetch group daa------------------------------", req.query);
+
+      const data = req.query;
+
+      const operation = 'fetch-group-members';
+
+      const result: any = await chatRabbitMqClient.produce(data, operation);
+
+      console.log(result,"result ------------ of the chats")
+      
+      const operation2 = 'fetch-group-users';
+
+      const result2: any = await userRabbitMqClient.produce(result, operation2);
+
+      console.log(result,"result ------------ of the second chats")
+
+
+      return res.json(result2);
+      
+  } catch (error) {
+      console.error("Error in fetchNotify:", error);
+      return res.status(500).json({ message: "Internal server error" });
+  }
+}
 
 
 
 
 };
+
+
+
 
 
 

@@ -35,7 +35,7 @@ userRouter.get('/courseView/:courseId',authencticateToken('user'),useController.
 userRouter.post('/report',authencticateToken('user'),useController.report)
 userRouter.get('/fetchNotify',authencticateToken('user'),useController.fetchNotify)
 userRouter.get('/updateReadStatus',authencticateToken('user'),useController.updateReadStatus)
-
+userRouter.get('/fetchGroupMembers',authencticateToken('user'),useController.fetchGroupMembers)
 
 
 export {userRouter}
