@@ -162,62 +162,111 @@ export const initializeSocket = (server: http.Server) => {
     socket.on(
       "sendMedia",
       async ({ roomId, senderId, mediaUrl, s3Key, mediaType }) => {
-        console.log("Media sent:", {
-          roomId,
-          senderId,
-          mediaUrl,
-          s3Key,
-          mediaType,
-        });
-
+        console.log("Media sent:", { roomId, senderId, mediaUrl, s3Key, mediaType });
+    
         try {
           const operation = "save-media";
-          // Include mediaType and s3Key in the mediaMessage to save in the database
+       
           const mediaMessage = { roomId, senderId, mediaUrl, s3Key, mediaType };
-          const response = await chatRabbitMqClient.produce(
-            mediaMessage,
-            operation
-          );
-
-          // Fetch the sender's data (username and profile picture) using RabbitMQ
+          console.log(mediaMessage,"lalalal")
+          const response = await chatRabbitMqClient.produce(mediaMessage, operation);
+    
+          // Response type with messageId and isRead properties
+          interface ResponseType {
+            _id: string;
+            isRead: boolean;
+          }
+    
+          const responseId = (response as ResponseType)._id;
+          const isRead = (response as ResponseType).isRead;
+    
+          // Fetch sender's data
           const operation2 = "fetch-sender-data";
           const data = { senderId };
-          const response2 = (await userRabbitMqClient.produce(
-            data,
-            operation2
-          )) as any; // Type assertion
+          const response2 = (await userRabbitMqClient.produce(data, operation2)) as any;
 
-          console.log(response2, "--------response user 99999");
+          console.log("op 2")
+    
+          // Fetch course data for notification
+          const operation3 = "notify-course-data";
+          const response3 = (await courseRabbitMqClient.produce({ roomId }, operation3)) as any;
 
-          if (response2.success) {
-            // Get the S3 URL for profile_picture
-            const profilePictureS3Key = response2.userData.profile_picture;
-            const signedProfilePictureUrl = await getS3SignedUrl(
-              profilePictureS3Key
-            );
 
-            // Update userData with the signed URL
-            response2.userData.profile_picture = signedProfilePictureUrl;
+          console.log("op 3")
+
+          let content = "";
+          if (mediaType === 'image') {
+            content = "photo";
+          } else if (mediaType === "video") {
+            content = "video";
           }
+          
+          console.log("Content before notification production:", content);
+    
+          // Store notification
+          const operation4 = "store-notification";
+          const response4 = await chatRabbitMqClient.produce(
+            {
+              message: {roomId,content},
+              username: response2.userData.username,
+              coursename: response3.courseName,
+              thumbnail: response3.thumbnail,
+            },
+            operation4
+          );
+    
+          if (response2.success) {
+            // Fetch and update signed URL for profile_picture if it exists
+            const profilePictureS3Key = response2.userData.profile_picture;
+            if (profilePictureS3Key) {
+              try {
+                const signedProfilePictureUrl = await getS3SignedUrl(profilePictureS3Key);
+                response2.userData.profile_picture = signedProfilePictureUrl;
+              } catch (error) {
+                console.error("Error generating signed URL for profile picture:", error);
+              }
+            } else {
+              response2.userData.profile_picture = "";
+            }
+          }
+    
+          // Generate a signed URL for the media content if necessary
+          let finalMediaUrl = mediaUrl;
+          if (mediaUrl.startsWith("uploads/")) {
+            const signedUrl = await getS3SignedUrl(mediaUrl);
+            finalMediaUrl = signedUrl ?? mediaUrl;
 
-          // Emit the media message along with userData
+
+
+            console.log("emmieted receieve media before")
+          }
+    
+          // Emit media message with user data and read status
           socket.to(roomId).emit("receiveMedia", {
-            mediaUrl,
-            s3Key,
+            isRead,
+            messageId: responseId,
+            mediaUrl: finalMediaUrl,
             mediaType,
             userData: response2.userData,
           });
-
-          socket.to(roomId).emit("receiveNotification", {
-            roomId,
+    
+          // Emit read status to sender
+          socket.emit("messageRead", {
+            isRead,
+            messageId: responseId,
+          });
+    
+          // Emit notification to all members in the room except the sender
+          socket.to("notifications").emit("receiveNotification", {
             senderId,
-            notification: `${response2.userData.username} sent a new message`,
+            notification: `${response2.userData.username} sent a new media message in group ${response3.courseName}`,
           });
         } catch (error) {
           console.error("Error sending media:", error);
         }
       }
     );
+    
 
 
 
