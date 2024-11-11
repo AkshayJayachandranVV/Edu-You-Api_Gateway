@@ -3,6 +3,7 @@ import tutorRabbitMqClient from './rabbitMQ/client'
 import courseRabbitMqClient from '../course/rabbitMQ/client'
 import userRabbitMqClient from '../user/rabbitMQ/client'
 import orderRabbitMqClient from '../order/rabbitMQ/client'
+import chatRabbitMqClient from '../chat/rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'
 import { tutorClient } from './grpc/services/client';
 import { getS3SignedUrl } from '../../s3SignedUrl/grtS3SignedUrl'
@@ -815,8 +816,58 @@ login: async (req: Request, res: Response) => {
             console.log(error, "Error in cardsData");
             res.status(500).json({ error: "Failed to retrieve tutor data" });
         }
-    }
+    },
    
+
+    courseView: async (req: Request, res: Response) => {
+        try {
+          console.log("senf ile ------------------------------", req.params);
+    
+          const operation = "course-view-details";
+    
+          const data = req.params;
+          // Fetch the chat data
+          const result: any = await courseRabbitMqClient.produce(data, operation);
+    
+          return res.json(result);
+        } catch (error) {
+          console.log(error, "error in fetchChat");
+          return res.status(500).json({ message: "Internal server error" });
+        }
+      },
+
+
+      getUserCourses: async (req: Request, res: Response) => {
+        try {
+          console.log("my courses tutor", req.params);
+          const { userId } = req.params;
+          const operation1 = "user-my-course";
+    
+          const data = {
+            userId: userId,
+          };
+          const result1: any = await userRabbitMqClient.produce(data, operation1);
+          // console.log("resuylteeee----------------------------------------11111111111111111111111111111111111111111", result1);
+    
+          const operation2 = "fetch-course-myCourse";
+          const result2: any = await courseRabbitMqClient.produce(
+            result1,
+            operation2
+          );
+          // console.log("resuylteeee-----------------------------------------2222222222222222222222222222222222222222", result2);
+    
+          const operation3 = 'fetch-last-message'
+    
+          const result3 = await chatRabbitMqClient.produce(result2.courses,operation3)
+       
+    
+          console.log(result3)
+    
+          return res.json(result3);
+        } catch (error) {
+          console.log(error, "error in google login");
+        }
+      },
 
 
 }

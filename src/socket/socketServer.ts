@@ -6,9 +6,8 @@ import http from "http";
 import { getS3SignedUrl } from "../s3SignedUrl/grtS3SignedUrl";
 
 const rooms: { [key: string]: string[] } = {};
-let roomId = ""
-let userId = ""
-
+let roomId = "";
+let userId = "";
 
 export const initializeSocket = (server: http.Server) => {
   const io = new SocketIOServer(server, {
@@ -21,26 +20,58 @@ export const initializeSocket = (server: http.Server) => {
   io.on("connection", (socket) => {
     console.log(`New client connected: ${socket.id}`);
 
-    console.log(socket.handshake.query.userId,"handshake")
+    console.log(socket.handshake.query.userId, "handshake");
 
-    if (typeof socket.handshake.query.userId === 'string') {
+    if (typeof socket.handshake.query.userId === "string") {
       socket.data.userId = socket.handshake.query.userId;
     } else {
-      socket.data.userId = ''; // Assign a fallback if needed
+      socket.data.userId = ""; // Assign a fallback if needed
     }
 
-
-
-    console.log("-------------------userId",userId)
+    console.log("-------------------userId", userId);
     // console.log("-------------------roomId",roomId)
 
     socket.on("joinRoom", (roomId: string) => {
       socket.join(roomId);
-      roomId = roomId
+      roomId = roomId;
       if (!rooms[roomId]) rooms[roomId] = [];
       if (!rooms[roomId].includes(socket.id)) rooms[roomId].push(socket.id);
       console.log(`Socket ${socket.id} joined room: ${roomId}`);
     });
+
+
+
+    
+
+    socket.on("goLive", async (data: { roomId: string, tutorId: string, courseId: string, sharedLink: string }) => {
+      try {
+          const { roomId, sharedLink, tutorId, courseId } = data;
+          console.log(`Tutor went live in room: ${roomId}, tutor: ${tutorId}, link: ${sharedLink}`);
+      
+          const requestData = { courseId, tutorId, sharedLink }; // Renamed from `data` to `requestData`
+          const operation = 'fetch-stream-user';
+      
+          // Retrieve list of users (excluding the tutor) from the response
+          const response = await chatRabbitMqClient.produce(requestData, operation);
+          console.log("Users fetched for live stream:", response);
+      
+          if (Array.isArray(response)) {
+              // Emit the shared link to each user
+              response.forEach(({ userId }) => {
+                  socket.to(userId).emit("liveStreamLink", { roomId, tutorId, sharedLink });
+              });
+          } else {
+              console.error("Unexpected response format:", response);
+          }
+      } catch (error) {
+          console.error("Error broadcasting live event:", error);
+      }
+  });
+  
+    
+    
+
+
 
     socket.on(
       "sendMessage",
@@ -147,7 +178,7 @@ export const initializeSocket = (server: http.Server) => {
             messageId: responseId,
           });
 
-          // Emit a notification to all members in the room (excluding the sender)
+          // IT WONT WORK BCIZ I CHANGES JOINROOMINSTEAD I USE USERID NEED TO CHANGE THAT
           socket.to("notifications").emit("receiveNotification", {
             senderId,
             notification: `${response2.userData.username} sent a new message in group ${response3.courseName}`,
@@ -162,85 +193,102 @@ export const initializeSocket = (server: http.Server) => {
     socket.on(
       "sendMedia",
       async ({ roomId, senderId, mediaUrl, s3Key, mediaType }) => {
-        console.log("Media sent:", { roomId, senderId, mediaUrl, s3Key, mediaType });
-    
+        console.log("Media sent:", {
+          roomId,
+          senderId,
+          mediaUrl,
+          s3Key,
+          mediaType,
+        });
+
         try {
           const operation = "save-media";
-       
+
           const mediaMessage = { roomId, senderId, mediaUrl, s3Key, mediaType };
-          console.log(mediaMessage,"lalalal")
-          const response = await chatRabbitMqClient.produce(mediaMessage, operation);
-    
+          console.log(mediaMessage, "lalalal");
+          const response = await chatRabbitMqClient.produce(
+            mediaMessage,
+            operation
+          );
+
           // Response type with messageId and isRead properties
           interface ResponseType {
             _id: string;
             isRead: boolean;
           }
-    
+
           const responseId = (response as ResponseType)._id;
           const isRead = (response as ResponseType).isRead;
-    
+
           // Fetch sender's data
           const operation2 = "fetch-sender-data";
           const data = { senderId };
-          const response2 = (await userRabbitMqClient.produce(data, operation2)) as any;
+          const response2 = (await userRabbitMqClient.produce(
+            data,
+            operation2
+          )) as any;
 
-          console.log("op 2")
-    
+          console.log("op 2");
+
           // Fetch course data for notification
           const operation3 = "notify-course-data";
-          const response3 = (await courseRabbitMqClient.produce({ roomId }, operation3)) as any;
+          const response3 = (await courseRabbitMqClient.produce(
+            { roomId },
+            operation3
+          )) as any;
 
-
-          console.log("op 3")
+          console.log("op 3");
 
           let content = "";
-          if (mediaType === 'image') {
+          if (mediaType === "image") {
             content = "photo";
           } else if (mediaType === "video") {
             content = "video";
           }
-          
+
           console.log("Content before notification production:", content);
-    
+
           // Store notification
           const operation4 = "store-notification";
           const response4 = await chatRabbitMqClient.produce(
             {
-              message: {roomId,content},
+              message: { roomId, content },
               username: response2.userData.username,
               coursename: response3.courseName,
               thumbnail: response3.thumbnail,
             },
             operation4
           );
-    
+
           if (response2.success) {
             // Fetch and update signed URL for profile_picture if it exists
             const profilePictureS3Key = response2.userData.profile_picture;
             if (profilePictureS3Key) {
               try {
-                const signedProfilePictureUrl = await getS3SignedUrl(profilePictureS3Key);
+                const signedProfilePictureUrl = await getS3SignedUrl(
+                  profilePictureS3Key
+                );
                 response2.userData.profile_picture = signedProfilePictureUrl;
               } catch (error) {
-                console.error("Error generating signed URL for profile picture:", error);
+                console.error(
+                  "Error generating signed URL for profile picture:",
+                  error
+                );
               }
             } else {
               response2.userData.profile_picture = "";
             }
           }
-    
+
           // Generate a signed URL for the media content if necessary
           let finalMediaUrl = mediaUrl;
           if (mediaUrl.startsWith("uploads/")) {
             const signedUrl = await getS3SignedUrl(mediaUrl);
             finalMediaUrl = signedUrl ?? mediaUrl;
 
-
-
-            console.log("emmieted receieve media before")
+            console.log("emmieted receieve media before");
           }
-    
+
           // Emit media message with user data and read status
           socket.to(roomId).emit("receiveMedia", {
             isRead,
@@ -249,13 +297,13 @@ export const initializeSocket = (server: http.Server) => {
             mediaType,
             userData: response2.userData,
           });
-    
+
           // Emit read status to sender
           socket.emit("messageRead", {
             isRead,
             messageId: responseId,
           });
-    
+
           // Emit notification to all members in the room except the sender
           socket.to("notifications").emit("receiveNotification", {
             senderId,
@@ -266,9 +314,6 @@ export const initializeSocket = (server: http.Server) => {
         }
       }
     );
-    
-
-
 
     socket.on("readMessages", (roomId) => {
       try {
@@ -279,9 +324,6 @@ export const initializeSocket = (server: http.Server) => {
         console.error("Error updating read status:", error);
       }
     });
-    
-
-
 
     socket.on("typingStatus", ({ isTyping, username, roomId }) => {
       try {
@@ -291,24 +333,26 @@ export const initializeSocket = (server: http.Server) => {
         console.error("Error sending typing status:", error);
       }
     });
-    
 
     socket.on("readDisconnect", async (data) => {
       try {
-          console.log(data,"kittinindoooooo")
+        console.log(data, "kittinindoooooo");
       } catch (error) {
         console.error("Error updating read status:", error);
       }
     });
 
-
-
     socket.on("disconnect", async () => {
-      console.log(`Client disconnected: ${socket.id}, UserId: ${socket.data.userId}`);
+      console.log(
+        `Client disconnected: ${socket.id}, UserId: ${socket.data.userId}`
+      );
 
       try {
         const operation = "update-read-users";
-        const result: any = await chatRabbitMqClient.produce({ userId: socket.data.userId }, operation);
+        const result: any = await chatRabbitMqClient.produce(
+          { userId: socket.data.userId },
+          operation
+        );
         console.log("Result of update-read-users operation:", result);
       } catch (error) {
         console.error("Error in update-read-users operation:", error);

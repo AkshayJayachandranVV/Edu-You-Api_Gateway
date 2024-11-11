@@ -26,6 +26,8 @@ tutorRouter.get("/courseStudents/:courseId",authencticateToken('tutor'),tutorCon
 tutorRouter.get("/getPresignedUrl",tutorController.getPresignedUrl)
 tutorRouter.get("/cardsData/:tutorId",tutorController.cardsData)
 tutorRouter.get("/graphData/:tutorId",tutorController.graphData)
+tutorRouter.get('/courseView/:courseId',authencticateToken('tutor'),tutorController.courseView)
+tutorRouter.get("/getCourses/:userId",authencticateToken('tutor'),tutorController.getUserCourses)
 export {tutorRouter}
 
 
