@@ -10,6 +10,7 @@ import { getS3SignedUrl } from '../../s3SignedUrl/grtS3SignedUrl'
 import { register } from 'module'
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import config from "../../config/config";
 
 
 
@@ -19,6 +20,25 @@ dotenv.config();
 interface GrpcError extends Error {
     details?: string; // Adding details property
 }
+
+
+
+interface JwtPayload {
+    tutorId: string;
+    email: string;
+    role: string;
+  }
+  
+  
+  interface UserJwtPayload extends JwtPayload {
+    tutorId: string;
+    email: string;
+    role: string;
+  }
+  
+  
+  const JWT_SECRET = config.jwt_key;
+  const JWT_REFRESH_SECRET =  config.jwt_refresh_key;
 
 import { S3Client, GetObjectCommand,PutObjectCommand} from '@aws-sdk/client-s3'
 
@@ -868,6 +888,51 @@ login: async (req: Request, res: Response) => {
           console.log(error, "error in google login");
         }
       },
+
+
+     
+      
+validateToken : async (req: Request, res: Response) => {
+    try {
+      console.log("tutorrr111111122222Validating token...", req.body);
+  
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ message: "Refresh token is required" });
+      }
+  
+      jwt.verify(token, JWT_REFRESH_SECRET as string, (err:any, decoded:any) => {
+        if (err) {
+          if (err.name === 'TokenExpiredError') {
+            console.log('Token expired', err);
+            return res.status(401).json({ success: false, message: 'Token expired' });
+          } else {
+            console.log('Invalid token', err);
+            return res.status(403).json({ success: false, message: 'Invalid token' });
+          }
+        }
+  
+        // Type assertion to ensure decoded contains the required properties
+        const { tutorId, email, role } = decoded as UserJwtPayload;
+  
+        // Generate a new access token
+        const newAccessToken = jwt.sign(
+          { tutorId, email, role },
+          JWT_SECRET,
+          { expiresIn: '1d' } // Set access token expiration
+        );
+  
+        // Send the new access token to the frontend
+        return res.status(200).json({ accessToken: newAccessToken });
+      });
+    } catch (error) {
+      console.error("Error in validateToken:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+  
+
+
 
 
 }

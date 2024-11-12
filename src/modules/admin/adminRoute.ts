@@ -15,4 +15,5 @@ adminRouter.post("/tutorIsBlocked", authenticationToken('admin'), adminControlle
 adminRouter.get("/courses", authenticationToken('admin'), adminController.courses);
 adminRouter.post("/listCourse", authenticationToken('admin'), adminController.listCourses);
 adminRouter.get("/reportCourses", authenticationToken('admin'), adminController.reportCourses);
+adminRouter.post('/refresh-token',adminController.validateToken)
 export { adminRouter };

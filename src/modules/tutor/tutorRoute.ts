@@ -19,15 +19,16 @@ tutorRouter.get("/myCourses/:tutorId",authencticateToken('tutor'),tutorControlle
 tutorRouter.get("/listCourse/:courseId",authencticateToken('tutor'),tutorController.listCourse)
 tutorRouter.get("/fetchEditCourse/:courseId",authencticateToken('tutor'),tutorController.fetchEditCourse)
 tutorRouter.put("/editProfile",authencticateToken('tutor'),upload.single('profile_picture'),tutorController.editProfile)
-tutorRouter.post("/getSignedUrlId",tutorController.getSignedUrl)
-tutorRouter.get("/getTutorDetails/:tutorId",tutorController.getTutorDetails)
+tutorRouter.post("/getSignedUrlId",authencticateToken('tutor'),tutorController.getSignedUrl)
+tutorRouter.get("/getTutorDetails/:tutorId",authencticateToken('tutor'),tutorController.getTutorDetails)
 tutorRouter.get("/payouts/:tutorId",authencticateToken('tutor'),tutorController.payouts)
 tutorRouter.get("/courseStudents/:courseId",authencticateToken('tutor'),tutorController.courseStudents)
-tutorRouter.get("/getPresignedUrl",tutorController.getPresignedUrl)
-tutorRouter.get("/cardsData/:tutorId",tutorController.cardsData)
-tutorRouter.get("/graphData/:tutorId",tutorController.graphData)
+tutorRouter.get("/getPresignedUrl",authencticateToken('tutor'),tutorController.getPresignedUrl)
+tutorRouter.get("/cardsData/:tutorId",authencticateToken('tutor'),tutorController.cardsData)
+tutorRouter.get("/graphData/:tutorId",authencticateToken('tutor'),tutorController.graphData)
 tutorRouter.get('/courseView/:courseId',authencticateToken('tutor'),tutorController.courseView)
 tutorRouter.get("/getCourses/:userId",authencticateToken('tutor'),tutorController.getUserCourses)
+tutorRouter.post('/refresh-token',tutorController.validateToken)
 export {tutorRouter}
 
 
