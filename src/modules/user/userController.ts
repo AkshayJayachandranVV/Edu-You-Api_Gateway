@@ -10,14 +10,34 @@ import { userClient } from "./grpc/services/client";
 import { getS3SignedUrl } from "../../s3SignedUrl/grtS3SignedUrl";
 import * as grpc from "@grpc/grpc-js";
 import { register } from "module";
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import config from "../../config/config";
 import dotenv from "dotenv";
+
 
 dotenv.config();
 
 interface GrpcError extends Error {
   details?: string; // Adding details property
 }
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+
+interface UserJwtPayload extends JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+
+const JWT_SECRET = config.jwt_key;
+const JWT_REFRESH_SECRET =  config.jwt_refresh_key;
+
 
 export const useController = {
   // memoryStorage: {} as { [key: string]: any },
@@ -458,7 +478,7 @@ export const useController = {
         operation
       );
 
-      console.log(result, "edit ------------ profile ");
+      // console.log(result, "edit ------------ profile ");
 
       return res.json(result);
     } catch (error) {
@@ -483,7 +503,7 @@ export const useController = {
 
       const result: any = await courseRabbitMqClient.produce(data, operation);
 
-      console.log(result, "course-------details ----------user ");
+      // console.log(result, "course-------details ----------user ");
 
       return res.json(result);
     } catch (error) {
@@ -496,14 +516,14 @@ export const useController = {
 
   allCourses: async (req: Request, res: Response) => {
     try {
-      console.log("Entered to the all courses user");
+      // console.log("Entered to the all courses user");
       const data = "";
 
       const operation = "all-courses";
 
       const result: any = await courseRabbitMqClient.produce(data, operation);
 
-      console.log(result, "course-------details ----------user ");
+      // console.log(result, "course-------details ----------user ");
 
       return res.json(result);
     } catch (error) {
@@ -551,23 +571,23 @@ export const useController = {
         userSend,
         "update-my-course"
       );
-      console.log(result2, "----------2-------------2-------------2");
+      // console.log(result2, "----------2-------------2-------------2");
       const tutorSend = { tutorId, courseId, userId };
       const result3: any = await tutorRabbitMqClient.produce(
         tutorSend,
         "update-course-students"
       );
-      console.log(result3, "----------3-------------3-------------3");
+      // console.log(result3, "----------3-------------3-------------3");
       const result4: any = await courseRabbitMqClient.produce(
         userSend,
         "update-course-students"
       );
-      console.log(result4, "----------4-------------4-------------4");
+      // console.log(result4, "----------4-------------4-------------4");
       const result5: any = await chatRabbitMqClient.produce(
         { tutorId, userId, courseId },
         "create-chat-room"
       );
-      console.log(result5, "----------5-------------5-------------5");
+      // console.log(result5, "----------5-------------5-------------5");
 
       return res.json(result);
     } catch (error) {
@@ -589,7 +609,7 @@ export const useController = {
       };
 
       const result: any = await tutorRabbitMqClient.produce(data, operation);
-      console.log("resuylteeee", result);
+      // console.log("resuylteeee", result);
 
       return res.json(result);
     } catch (error) {
@@ -621,7 +641,7 @@ export const useController = {
       const result3 = await chatRabbitMqClient.produce(result2.courses,operation3)
    
 
-      console.log(result3)
+      // console.log(result3)
 
       return res.json(result3);
     } catch (error) {
@@ -729,7 +749,7 @@ export const useController = {
         operation2
       );
 
-      console.log(result2, "------------result 2");
+      // console.log(result2, "------------result 2");
 
       return res.json(result2);
     } catch (error) {
@@ -884,8 +904,49 @@ fetchGroupMembers: async (req: Request, res: Response) => {
       console.error("Error in fetchNotify:", error);
       return res.status(500).json({ message: "Internal server error" });
   }
-}
+},
 
+
+
+
+validateToken : async (req: Request, res: Response) => {
+  try {
+    console.log("111111122222Validating token...", req.body);
+
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: "Refresh token is required" });
+    }
+
+    jwt.verify(token, JWT_REFRESH_SECRET as string, (err:any, decoded:any) => {
+      if (err) {
+        if (err.name === 'TokenExpiredError') {
+          console.log('Token expired', err);
+          return res.status(401).json({ success: false, message: 'Token expired' });
+        } else {
+          console.log('Invalid token', err);
+          return res.status(403).json({ success: false, message: 'Invalid token' });
+        }
+      }
+
+      // Type assertion to ensure decoded contains the required properties
+      const { userId, email, role } = decoded as UserJwtPayload;
+
+      // Generate a new access token
+      const newAccessToken = jwt.sign(
+        { userId, email, role },
+        JWT_SECRET,
+        { expiresIn: '1d' } // Set access token expiration
+      );
+
+      // Send the new access token to the frontend
+      return res.status(200).json({ accessToken: newAccessToken });
+    });
+  } catch (error) {
+    console.error("Error in validateToken:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+},
 
 
 

@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mysecretisalwayssecretcantfind'
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'myrefreshsecretisalwayssecretcantfind'
+const JWT_SECRET = process.env.JWT_SECRET || ''
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || ''
 
 interface JwtPayload {
   id: string;

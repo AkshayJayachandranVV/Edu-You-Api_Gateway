@@ -19,6 +19,7 @@ const authenticationToken = (requiredRole: string) => {
 
     // Verify the token
     jwt.verify(token, config.jwt_key as string, (err, decoded) => {
+      console.log("erororororkoekoekoekeo",token,err)
       if (err) {
         // Handle token expiration or invalid token
         if (err.name === 'TokenExpiredError') {
