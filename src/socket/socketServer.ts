@@ -39,39 +39,45 @@ export const initializeSocket = (server: http.Server) => {
       console.log(`Socket ${socket.id} joined room: ${roomId}`);
     });
 
-
-
-    
-
-    socket.on("goLive", async (data: { roomId: string, tutorId: string, courseId: string, sharedLink: string }) => {
-      try {
+    socket.on(
+      "goLive",
+      async (data: {
+        roomId: string;
+        tutorId: string;
+        courseId: string;
+        sharedLink: string;
+      }) => {
+        try {
           const { roomId, sharedLink, tutorId, courseId } = data;
-          console.log(`Tutor went live in room: ${roomId}, tutor: ${tutorId}, link: ${sharedLink}`);
-      
+          console.log(
+            `Tutor went live in room: ${roomId}, tutor: ${tutorId}, link: ${sharedLink}`
+          );
+
           const requestData = { courseId, tutorId, sharedLink }; // Renamed from `data` to `requestData`
-          const operation = 'fetch-stream-user';
-      
+          const operation = "fetch-stream-user";
+
           // Retrieve list of users (excluding the tutor) from the response
-          const response = await chatRabbitMqClient.produce(requestData, operation);
+          const response = await chatRabbitMqClient.produce(
+            requestData,
+            operation
+          );
           console.log("Users fetched for live stream:", response);
-      
+
           if (Array.isArray(response)) {
-              // Emit the shared link to each user
-              response.forEach(({ userId }) => {
-                  socket.to(userId).emit("liveStreamLink", { roomId, tutorId, sharedLink });
-              });
+            // Emit the shared link to each user
+            response.forEach(({ userId }) => {
+              socket
+                .to(userId)
+                .emit("liveStreamLink", { roomId, tutorId, sharedLink });
+            });
           } else {
-              console.error("Unexpected response format:", response);
+            console.error("Unexpected response format:", response);
           }
-      } catch (error) {
+        } catch (error) {
           console.error("Error broadcasting live event:", error);
+        }
       }
-  });
-  
-    
-    
-
-
+    );
 
     socket.on(
       "sendMessage",
@@ -89,14 +95,18 @@ export const initializeSocket = (server: http.Server) => {
         );
 
         try {
-          const operation = "save-message";
-          const message = { roomId, senderId, content };
-          const response = await chatRabbitMqClient.produce(message, operation);
-
           interface ResponseType {
             _id: string;
             isRead: boolean;
+            participantIds: { userId: string }[];
           }
+
+          const operation = "save-message";
+          const message = { roomId, senderId, content };
+          const response = (await chatRabbitMqClient.produce(
+            message,
+            operation
+          )) as ResponseType;
 
           console.log((response as ResponseType)._id);
 
@@ -120,7 +130,7 @@ export const initializeSocket = (server: http.Server) => {
           const response3 = (await courseRabbitMqClient.produce(
             { roomId },
             operation3
-          )) as any; // Type assertion here
+          )) as any;
 
           // console.log(response3,"--------responsie usre 99999")
 
@@ -133,7 +143,7 @@ export const initializeSocket = (server: http.Server) => {
               thumbnail: response3.thumbnail,
             },
             operation4
-          )) as any; // Type assertion here
+          )) as any;
 
           // console.log(response4,"--------responsie stiring notification")
 
@@ -178,10 +188,14 @@ export const initializeSocket = (server: http.Server) => {
             messageId: responseId,
           });
 
+          console.log("getting notifican", response);
+
           // IT WONT WORK BCIZ I CHANGES JOINROOMINSTEAD I USE USERID NEED TO CHANGE THAT
-          socket.to("notifications").emit("receiveNotification", {
-            senderId,
-            notification: `${response2.userData.username} sent a new message in group ${response3.courseName}`,
+          response.participantIds.forEach(({ userId }) => {
+            socket.to(userId).emit("receiveNotification", {
+              senderId,
+              notification: `${response2.userData.username} sent a new message in group ${response3.courseName}`,
+            });
           });
         } catch (error) {
           console.error("Error saving message:", error);
@@ -202,6 +216,13 @@ export const initializeSocket = (server: http.Server) => {
         });
 
         try {
+          // Response type with messageId and isRead properties
+          interface ResponseType {
+            _id: string;
+            isRead: boolean;
+            participantIds: { userId: string }[];
+          }
+
           const operation = "save-media";
 
           const mediaMessage = { roomId, senderId, mediaUrl, s3Key, mediaType };
@@ -209,13 +230,7 @@ export const initializeSocket = (server: http.Server) => {
           const response = await chatRabbitMqClient.produce(
             mediaMessage,
             operation
-          );
-
-          // Response type with messageId and isRead properties
-          interface ResponseType {
-            _id: string;
-            isRead: boolean;
-          }
+          )as ResponseType;;
 
           const responseId = (response as ResponseType)._id;
           const isRead = (response as ResponseType).isRead;
@@ -305,9 +320,16 @@ export const initializeSocket = (server: http.Server) => {
           });
 
           // Emit notification to all members in the room except the sender
-          socket.to("notifications").emit("receiveNotification", {
-            senderId,
-            notification: `${response2.userData.username} sent a new media message in group ${response3.courseName}`,
+          // socket.to("notifications").emit("receiveNotification", {
+          //   senderId,
+          //   notification: `${response2.userData.username} sent a new media message in group ${response3.courseName}`,
+          // });
+
+          response.participantIds.forEach(({ userId }) => {
+            socket.to(userId).emit("receiveNotification", {
+              senderId,
+              notification: `${response2.userData.username} sent a new message in group ${response3.courseName}`,
+            });
           });
         } catch (error) {
           console.error("Error sending media:", error);
@@ -320,6 +342,22 @@ export const initializeSocket = (server: http.Server) => {
         console.log("Entered readMessages, broadcasting to room:", roomId);
         // Broadcast to other clients in the room that messages were read
         socket.broadcast.to(roomId).emit("messagesRead");
+      } catch (error) {
+        console.error("Error updating read status:", error);
+      }
+    });
+
+
+    socket.on("unReadMessages",async(roomId,userId) => {
+      try {
+        console.log("Entered readMessages, broadcasting to room:", roomId,userId);
+        const operation = "update-read-users";
+        const result: any = await chatRabbitMqClient.produce(
+          { userId: socket.data.userId },
+          operation
+        );
+        console.log("ANGHANA UNREAD", result);
+        
       } catch (error) {
         console.error("Error updating read status:", error);
       }

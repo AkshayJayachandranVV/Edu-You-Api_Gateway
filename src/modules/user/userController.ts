@@ -799,7 +799,7 @@ export const useController = {
     try {
         console.log("fetch Notify courseIds ------------------------------", req.query);
 
-        const operation = "fetch-notification";
+        const operation = "fetch-notification"; 
 
         // Ensure coursesEnrolled is an array of strings
         const coursesEnrolled = Array.isArray(req.query.coursesEnrolled)
@@ -811,10 +811,16 @@ export const useController = {
             roomId: courseId as string,
         }));
 
-        console.log(formattedCourses);
+        const userId = req.query.userId;
+
+        // Structure `data` with both `userId` and `coursesEnrolled`
+        const data = {
+            userId,
+            coursesEnrolled: formattedCourses  // Use `coursesEnrolled` as an array within `data`
+        };
 
         // Fetch the notification data
-        const result: any = await chatRabbitMqClient.produce(formattedCourses, operation);
+        const result: any = await chatRabbitMqClient.produce(data, operation);
 
         // Assuming result is an array of notification objects
         const notificationsWithS3Urls = await Promise.all(result.map(async (notification: any) => {
@@ -826,7 +832,7 @@ export const useController = {
             };
         }));
 
-        console.log(notificationsWithS3Urls);
+        console.log("Notification results:", notificationsWithS3Urls);
 
         return res.json(notificationsWithS3Urls);
     } catch (error) {
@@ -834,6 +840,7 @@ export const useController = {
         return res.status(500).json({ message: "Internal server error" });
     }
 },
+
 
 
 updateReadStatus: async (req: Request, res: Response) => {
@@ -948,6 +955,70 @@ validateToken : async (req: Request, res: Response) => {
   }
 },
 
+
+
+reviewPost: async (req: Request, res: Response) => {
+  try {
+    console.log("REVIW POST ------------------------------", req.body);
+    
+    const data = req.body;
+    const operation = 'store-review';
+    const result: any = await courseRabbitMqClient.produce(data, operation);
+
+    console.log(result, "result ------------ of the reviewpost");
+
+    // Generate the new signed S3 URL
+
+    if(result.success===true){
+      const s3Url = await getS3SignedUrl(result.review.profilePicture);
+
+      // Update the profilePicture inside the review object
+      result.review.profilePicture = s3Url;
+  
+      // Return the modified result
+      return res.json(result);
+    }else{
+      return res.json(result)
+    }
+
+
+  } catch (error) {
+    console.error("Error in fetchNotify:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+},
+
+
+fetchReview: async (req: Request, res: Response) => {
+  try {
+      console.log("REVIW fetchReview ------------------------------", req.params);
+   
+      const data = req.params;
+
+      const operation = 'fetch-review';
+
+      const result: any = await courseRabbitMqClient.produce(data, operation);
+
+      console.log(result,"result ------------ of the fetchReview")
+
+      const reviewsWithS3Urls = await Promise.all(result.reviews.map(async (review: any) => {
+        // Replace the thumbnail field with the S3 URL
+        const s3Url = await getS3SignedUrl(review.profilePicture); // Await S3 URL generation
+        return {
+            ...review, // Spread existing notification properties
+            profilePicture: s3Url, // Replace thumbnail with S3 URL
+        };
+    }));
+
+    console.log(reviewsWithS3Urls);
+    
+      return res.json(reviewsWithS3Urls);
+
+  } catch (error) {
+      console.error("Error in fetchNotify:", error);
+      return res.status(500).json({ message: "Internal server error" });
+  }
+},
 
 
 };

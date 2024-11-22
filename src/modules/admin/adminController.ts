@@ -3,8 +3,10 @@ import adminRabbitMqClient from './rabbitMQ/client'
 import userRabbitMqClient from '../user/rabbitMQ/client'
 import tutorRabbitMqClient from '../tutor/rabbitMQ/client'
 import courseRabbitMqClient from '../course/rabbitMQ/client'
+import orderRabbitMqClient from '../order/rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'  
 import { adminClient } from './grpc/services/client';
+import { getS3SignedUrl } from '../../s3SignedUrl/grtS3SignedUrl'
 import config from "../../config/config";
 import jwt from 'jsonwebtoken';
 
@@ -103,13 +105,15 @@ export const adminController ={
     students : async(req : Request, res : Response) => {
         try {
 
-            console.log("Entered to the students list ")
+            console.log("Entered to the students list ", req.query)
+
+            const data = req.query
     
             const operation = 'admin-students'
 
-            const result: any = await userRabbitMqClient.produce('',operation)
+            const result: any = await userRabbitMqClient.produce(data,operation)
 
-            // console.log(result, 'admin result ------------- total-------students ');
+            console.log(result, 'admin result ------------- total-------students ');
 
             return res.json(result)
             
@@ -148,13 +152,15 @@ export const adminController ={
     tutors : async(req : Request, res : Response) => {
         try {
 
-            console.log("Entered to the tutors list ")
+            console.log("Entered to the tutors list ",req.query)
     
             const operation = 'admin-tutors'
 
-            const result: any = await tutorRabbitMqClient.produce('',operation)
+            const data = req.query
 
-            // console.log(result, 'admin result ------------- total-------tutors ');
+            const result: any = await tutorRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'admin result ------------- total-------tutors ');
 
             return res.json(result)
             
@@ -194,13 +200,15 @@ export const adminController ={
     courses : async(req : Request, res : Response) => {
         try {
 
-            console.log("Entered to the tutors list ")
+            console.log("Entered to the courses list ",req.query)
+
+            const data = req.query
     
             const operation = 'admin-courses'
 
-            const result: any = await courseRabbitMqClient.produce('',operation)
+            const result: any = await courseRabbitMqClient.produce(data,operation)
 
-            // console.log(result, 'admin result ------------- total-------tutors ');
+            console.log(result, 'admin result ------------- total-------courses ');
 
             return res.json(result)
             
@@ -306,16 +314,114 @@ export const adminController ={
         }
       },
 
+    
+      payouts : async(req : Request, res : Response) => {
+        try {
+
+            console.log("Entered to the tutors list ",req.query)
+
+            const data= req.query
+    
+            const operation = 'admin-payouts'
+
+            const result: any = await orderRabbitMqClient.produce(data,operation)
+
+            console.log(result, 'admin result');
+
+            const operation2 = 'admin-payout-tutor'
+
+            const result2:any = await tutorRabbitMqClient.produce(result.orders,operation2)
+
+            // console.log("1")
+            // console.log(result2)
+            result.orders =  result2
+            const operation3 = 'admin-payout-user'
+
+            const result3:any = await userRabbitMqClient.produce(result2,operation3)
+
+            console.log("232")
+            console.log(result3)
 
 
+            const payoutsWithS3Urls = await Promise.all(result3.userData.map(async (item: any) => {
+                // Replace the thumbnail field with the S3 URL
+                const s3Url = await getS3SignedUrl(item.thumbnail); // Await S3 URL generation
+                return { ...item, thumbnail: s3Url }; // Return the updated item
+            }));
+
+            console.log("testinh",payoutsWithS3Urls)
+
+            return res.json({totalCount:result.totalOrders,orders:payoutsWithS3Urls})
+            
+        } catch (error) {
+            return res.status(500).json({
+                success: false,
+                message: "Internal Server Error. Please try again later."
+            })
+        }
+    },
+
+
+
+    graphData: async (req: Request, res: Response) => {
+        try {
+            console.log("Fetching user data:");
+            const operation1 = 'admin-bargraph-data';
+            const operation2 = 'admin-piegraph-data';
+    
+            // Call both RabbitMQ clients to retrieve data
+            const resultBar: any = await orderRabbitMqClient.produce({}, operation1);
+            console.log("first reply",resultBar)
+            const resultPie: any = await orderRabbitMqClient.produce({},operation2);
+            console.log("sedon reply",resultPie)
+    
+
+            console.log("00000000000000000000000000",resultBar,resultPie,"--------------------------------------")
+            const combinedResult = {
+                barGraph: resultBar,
+                pieGraph: resultPie,
+            };
+    
+            return res.json(combinedResult);
+        } catch (error) {
+            console.log(error, "Error in cardsData");
+            res.status(500).json({ error: "Failed to retrieve tutor data" });
+        }
+    },
+
+
+    cardsData: async (req: Request, res: Response) => {
+        try {
+            console.log("cardsData level data:");
+            const operation1 = 'admin-total-profit';
+            const operation2 = 'admin-total-courses';
+            const operation3 = 'admin-total-users';
+    
+            // Call both RabbitMQ clients to retrieve data
+            const result1: any = await orderRabbitMqClient.produce({}, operation1);
+            console.log("first reply",result1)
+            const result2: any = await courseRabbitMqClient.produce({},operation2);
+            console.log("sedon reply",result2)
+
+            const result3: any = await userRabbitMqClient.produce({},operation3);
+            console.log("sedon reply",result3)
+    
+
+            console.log("00000000000000000000000000----",result1,result2,result3,"--------------------------------------")
+            const combinedResult = {
+                totalProfit:result1,
+                totalCourses:result2,
+                totalStudents:result3
+            };
+    
+            return res.json(combinedResult);
+        } catch (error) {
+            console.log(error, "Error in cardsData");
+            res.status(500).json({ error: "Failed to retrieve tutor data" });
+        }
+    },
 
 
 }
-
-
-
-
-
-
 
 

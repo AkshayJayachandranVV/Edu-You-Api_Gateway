@@ -17,7 +17,7 @@ const userProtoDescription = grpc.loadPackageDefinition(userPackageDefinition) a
 const userProto = userProtoDescription.user;
 
 const userClient = new userProto.UserService(
-    '0.0.0.0:4001',
+    'eduyou-user-service:40001',
     grpc.credentials.createInsecure()
 );
 

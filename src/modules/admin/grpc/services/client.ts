@@ -17,7 +17,7 @@ const adminProtoDescription = grpc.loadPackageDefinition(adminPackageDefinition)
 const adminProto = adminProtoDescription.admin;
 
 const adminClient = new adminProto.AdminService(
-    '0.0.0.0:4003',
+    'eduyou-admin-service:40003',
     grpc.credentials.createInsecure()
 );
 
