@@ -4,6 +4,7 @@ import userRabbitMqClient from "../modules/user/rabbitMQ/client";
 import courseRabbitMqClient from "../modules/course/rabbitMQ/client";
 import http from "http";
 import { getS3SignedUrl } from "../s3SignedUrl/grtS3SignedUrl";
+import config from '../config/config'
 
 const rooms: { [key: string]: string[] } = {};
 let roomId = "";
@@ -11,8 +12,9 @@ let userId = "";
 
 export const initializeSocket = (server: http.Server) => {
   const io = new SocketIOServer(server, {
+    pingTimeout: 60000,
     cors: {
-      origin: "*",
+      origin: config.client_url,
       methods: ["GET", "POST"],
     },
   });

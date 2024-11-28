@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package course;
+
+// Service definition
+service CourseService {
+  rpc userCourse (EmptyRequest) returns (CourseResponse);
+  rpc allCourses (pagination) returns (CourseResponse);
+  rpc courseDetails (CourseDetailRequest) returns (CourseDetailResponse);
+  rpc fetchReview (CourseDetailRequest) returns (CourseDetailResponse);  
+}
+
+// Pagination message
+message pagination {
+  int32 skip = 1;
+  int32 limit = 2;
+}
+
+// Empty request message
+message EmptyRequest {}
+
+// Response message for Course (Generic Response for all courses)
+message CourseResponse {
+  string message = 1;
+  bool success = 2;
+  repeated Course courses = 3;
+  int32 totalCount = 4;
+}
+
+// Response message for Course Details (Specific Response for courseDetails)
+message CourseDetailResponse {
+   string message = 1;
+   bool success = 2;
+   Course courses = 3; 
+   string courseId = 4;
+}
+
+// Course message
+message Course {
+  string _id = 1;  // Course ID
+  string tutorId = 2;  // Tutor ID
+  string courseName = 3;  // Course name
+  string courseDescription = 4;  // Course description
+  string thumbnail = 5;  // Thumbnail URL
+  float coursePrice = 6;  // Course price
+  float courseDiscountPrice = 7;  // Discounted price
+  string courseCategory = 8;  // Course category
+  bool isListed = 9;  // Whether the course is listed
+  string courseLevel = 10;  // Level of the course (Beginner, Intermediate, Advanced)
+  string demoURL = 11;  // URL to course demo (optional)
+  repeated string prerequisites = 12;  // List of prerequisites
+  repeated string benefits = 13;  // List of benefits
+  repeated Section sections = 14;  // List of course sections
+  repeated Student students = 15;  // List of enrolled students
+  string createdAt = 16;  // Course creation date (timestamp)
+  string updatedAt = 17;  // Last updated date (timestamp)
+}
+
+// Section message (for sections in the course)
+message Section {
+  string title = 1;  // Section title
+  string content = 2;  // Section content (optional)
+  repeated Lesson lessons = 3;  // List of lessons in the section
+}
+
+// Lesson message (for lessons in a section)
+message Lesson {
+  string title = 1;  // Lesson title
+  string description = 2;  // Lesson description (optional)
+  string video = 3;  // Video URL for the lesson
+}
+
+// Student message (for students enrolled in the course)
+message Student {
+  string studentId = 1;  // Student ID
+  string enrolledDate = 2;  // Enrollment date
+}
+
+// Course details request message
+message CourseDetailRequest {
+  string courseId = 1;  // Course ID to fetch details for
+}

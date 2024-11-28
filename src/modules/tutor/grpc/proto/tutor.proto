@@ -7,6 +7,23 @@ service TutorService {
     rpc register (RegisterTutorRequest) returns (RegisterTutorResponse);
     rpc verifyOtp (VerifyOtpTutorRequest) returns (VerifyOtpTutorResponse);
     rpc googleLogin (GoogleLoginTutorRequest) returns (GoogleLoginTutorResponse);
+    rpc fetchTutor (FetchTutorRequest) returns (FetchTutorResponse);
+}
+
+
+message FetchTutorRequest {
+  string courseId = 1; 
+}
+
+message FetchTutorResponse {
+  repeated Tutor tutors = 1; // List of tutors
+}
+
+
+message Tutor {
+  string name = 1; // Tutor name
+  string profile_picture = 2; // S3 key for profile picture
+  string expertise = 3; // Tutor expertise
 }
 
 // Define the TutorData message

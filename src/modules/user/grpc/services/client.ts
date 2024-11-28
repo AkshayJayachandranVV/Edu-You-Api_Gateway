@@ -1,6 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
+import config from '../../../../config/config';
 
 const USER_PROTO_PATH = path.resolve(__dirname, '../proto/user.proto');
 
@@ -17,7 +18,7 @@ const userProtoDescription = grpc.loadPackageDefinition(userPackageDefinition) a
 const userProto = userProtoDescription.user;
 
 const userClient = new userProto.UserService(
-    'eduyou-user-service:40001',
+    config.grpc_user_url,
     grpc.credentials.createInsecure()
 );
 

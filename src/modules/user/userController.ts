@@ -7,6 +7,8 @@ import orderRabbitMqClient from "../order/rabbitMQ/client";
 import tutorRabbitMqClient from "../tutor/rabbitMQ/client";
 import chatRabbitMqClient from "../chat/rabbitMQ/client";
 import { userClient } from "./grpc/services/client";
+import { courseClient } from "../course/grpc/service/client";
+import { tutorClient} from "../tutor/grpc/services/client";
 import { getS3SignedUrl } from "../../s3SignedUrl/grtS3SignedUrl";
 import * as grpc from "@grpc/grpc-js";
 import { register } from "module";
@@ -489,24 +491,68 @@ export const useController = {
     }
   },
 
-  courseDetails: async (req: Request, res: Response) => {
+    courseDetails: async (req: Request, res: Response) => {
+      try {
+        console.log("Entered ---------- user0",req.params);
+  
+        const { courseId } = req.params;
+  
+        // Create the request payload
+        const requestPayload = { courseId };
+  
+        // Call the gRPC method
+        courseClient.courseDetails(requestPayload, (err: any, response: any) => {
+          if (err) {
+            console.error("gRPC error:", err);
+            return res.status(500).json({
+              success: false,
+              message: "Failed to fetch course details.",
+            });
+          }
+
+          console.log("kitty poyi",response)
+  
+          // Handle successful gRPC response
+          return res.json(response);
+        });
+      } catch (error) {
+        console.error("Internal Server Error:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Internal Server Error. Please try again later.",
+        });
+      }
+    },
+  
+
+
+
+   allCourses : async (req: Request, res: Response) => {
     try {
-      console.log("Entered to the courseDetails user");
-
-      const { courseId } = req.params;
-
-      const data = {
-        courseId: courseId,
-      };
-
-      const operation = "course-details";
-
-      const result: any = await courseRabbitMqClient.produce(data, operation);
-
-      // console.log(result, "course-------details ----------user ");
-
-      return res.json(result);
+      // Log entry for debugging
+      console.log("Entered allCourses function--");
+  
+      // Prepare the gRPC request data if required
+      const requestPayload = req.query; // Use an empty object for no input
+  
+      // Call the gRPC method
+      courseClient.allCourses(requestPayload, (err: any, result: any) => {
+        if (err) {
+          console.error("gRPC Error:", err);
+  
+          // Return error response to the client
+          return res.status(500).json({
+            success: false,
+            message: err.message || "Internal Server Error. Please try again later.",
+          });
+        }
+  
+        return res.json(result);
+      });
     } catch (error) {
+      console.error("Unexpected Error:", error);
+  
+      // Handle unexpected errors
       return res.status(500).json({
         success: false,
         message: "Internal Server Error. Please try again later.",
@@ -514,25 +560,7 @@ export const useController = {
     }
   },
 
-  allCourses: async (req: Request, res: Response) => {
-    try {
-      // console.log("Entered to the all courses user");
-      const data = "";
 
-      const operation = "all-courses";
-
-      const result: any = await courseRabbitMqClient.produce(data, operation);
-
-      // console.log(result, "course-------details ----------user ");
-
-      return res.json(result);
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: "Internal Server Error. Please try again later.",
-      });
-    }
-  },
 
   payment: async (req: Request, res: Response) => {
     try {
@@ -648,6 +676,8 @@ export const useController = {
       console.log(error, "error in google login");
     }
   },
+
+  
 
   fetchChat: async (req: Request, res: Response) => {
     const isS3Key = (key: string) => {
@@ -1021,7 +1051,48 @@ fetchReview: async (req: Request, res: Response) => {
 },
 
 
+fetchTutor: async (req: Request, res: Response) => {
+  try {
+    console.log("TuToR vannu------------------------------", req.params);
+
+    const { courseId } = req.params; // Assuming courseId is passed in the params
+    const requestData = { courseId }; // Prepare the request object for gRPC
+
+    // Call gRPC method to fetch tutor data
+    const grpcResponse: any = await new Promise((resolve, reject) => {
+      tutorClient.fetchTutor(requestData, (err: any, response: any) => {
+        if (err) {
+          return reject(err); // Reject the promise in case of error
+        }
+        resolve(response); // Resolve with the gRPC response
+      });
+    });
+
+    console.log(grpcResponse, "result ------------ of the fetchTUTOR DETAISL");
+
+    // Assuming there's only one tutor, directly access the first element of the response
+    const tutor = grpcResponse.tutors[0]; // Get the first tutor from the array (assuming only one tutor is returned)
+
+    // If there's a profile picture, replace it with the S3 signed URL
+    if (tutor.profile_picture) {
+      const s3Url = await getS3SignedUrl(tutor.profile_picture); // Await S3 URL generation
+      tutor.profile_picture = s3Url; // Replace profile_picture with S3 URL
+    }
+
+    console.log("Final tutor data: ", tutor);
+
+    return res.json(tutor); // Return the single tutor
+
+  } catch (error) {
+    console.error("Error in fetchTutor:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+},
+
+
+
 };
+
 
 
 

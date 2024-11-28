@@ -16,7 +16,7 @@ const app = express();
 
 const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allowed?: boolean) => void) => {
-    if (!origin || origin === 'http://localhost:5173') {
+    if (!origin || origin === config.client_url) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

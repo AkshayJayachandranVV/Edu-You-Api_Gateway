@@ -1,6 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
+import config from '../../../../config/config';
 
 const TUTOR_PROTO_PATH = path.resolve(__dirname, '../proto/tutor.proto');
 
@@ -17,7 +18,7 @@ const tutorProtoDescription = grpc.loadPackageDefinition(tutorPackageDefinition)
 const userProto = tutorProtoDescription.tutor;
 
 const tutorClient = new userProto.TutorService(
-    'eduyou-tutor-service:40002',
+    config.grpc_tutor_url,
     grpc.credentials.createInsecure()
 );
 

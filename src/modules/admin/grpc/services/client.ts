@@ -1,6 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
+import config from '../../../../config/config';
 
 const ADMIN_PROTO_PATH = path.resolve(__dirname, '../proto/admin.proto');
 
@@ -17,7 +18,7 @@ const adminProtoDescription = grpc.loadPackageDefinition(adminPackageDefinition)
 const adminProto = adminProtoDescription.admin;
 
 const adminClient = new adminProto.AdminService(
-    'eduyou-admin-service:40003',
+    config.grpc_admin_url,
     grpc.credentials.createInsecure()
 );
 

@@ -27,7 +27,7 @@ export const getS3SignedUrl = async (imageKey: string): Promise<string | null> =
         const command = new GetObjectCommand(params);
 
         // Set the expiry duration for the signed URL (in seconds)
-        const seconds = 604800; // e.g., URL expires in 60 seconds
+        const seconds = 604800; 
 
         // Generate the pre-signed URL
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: seconds });

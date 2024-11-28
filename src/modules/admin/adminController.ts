@@ -7,6 +7,7 @@ import orderRabbitMqClient from '../order/rabbitMQ/client'
 import {jwtCreate} from '../../jwt/jwtCreate'  
 import { adminClient } from './grpc/services/client';
 import { getS3SignedUrl } from '../../s3SignedUrl/grtS3SignedUrl'
+import {courseClient} from '../course/grpc/service/client'
 import config from "../../config/config";
 import jwt from 'jsonwebtoken';
 
@@ -102,26 +103,36 @@ export const adminController ={
     
 
 
-    students : async(req : Request, res : Response) => {
+    students: async (req: Request, res: Response) => {
         try {
-
-            console.log("Entered to the students list ", req.query)
-
-            const data = req.query
+            console.log("Entered to the students list ", req.query);
     
-            const operation = 'admin-students'
-
-            const result: any = await userRabbitMqClient.produce(data,operation)
-
-            console.log(result, 'admin result ------------- total-------students ');
-
-            return res.json(result)
+            const data = req.query;
+            const operation = 'admin-students';
+    
             
+            const result: any = await userRabbitMqClient.produce(data, operation);
+    
+            console.log(result, 'admin result ------------- total-------students ');
+    
+            
+            const updatedUsers = result.users.map((user: any) => {
+                if (user.profile_picture) {
+                    user.profile_picture = getS3SignedUrl(user.profile_picture); 
+                }
+                return user;
+            });
+            result.users = updatedUsers;
+    
+           
+            return res.json(result);
+    
         } catch (error) {
+            console.error("Error fetching students data: ", error);
             return res.status(500).json({
                 success: false,
                 message: "Internal Server Error. Please try again later."
-            })
+            });
         }
     },
 
@@ -149,26 +160,34 @@ export const adminController ={
     },
 
 
-    tutors : async(req : Request, res : Response) => {
+    tutors: async (req: Request, res: Response) => {
         try {
-
-            console.log("Entered to the tutors list ",req.query)
+            console.log("Entered to the tutors list ", req.query);
     
-            const operation = 'admin-tutors'
-
-            const data = req.query
-
-            const result: any = await tutorRabbitMqClient.produce(data,operation)
-
+            const data = req.query;
+            const operation = 'admin-tutors';
+    
+            // Get the result from the RabbitMQ client
+            const result: any = await tutorRabbitMqClient.produce(data, operation);
+    
             console.log(result, 'admin result ------------- total-------tutors ');
-
-            return res.json(result)
             
+            const updatedTutors = result.tutors.map((tutor: any) => {
+                if (tutor.profile_picture) {
+                    tutor.profile_picture = getS3SignedUrl(tutor.profile_picture); 
+                }
+                return tutor;
+            });
+            result.tutors = updatedTutors;
+    
+            return res.json(result);
+    
         } catch (error) {
+            console.error("Error fetching tutors data: ", error);
             return res.status(500).json({
                 success: false,
                 message: "Internal Server Error. Please try again later."
-            })
+            });
         }
     },
 
@@ -197,26 +216,28 @@ export const adminController ={
     },
 
 
-    courses : async(req : Request, res : Response) => {
+    courses : async (req: Request, res: Response): Promise<void> => {
         try {
-
-            console.log("Entered to the courses list ",req.query)
-
-            const data = req.query
+            console.log("Entered to the courses list ", req.query);
     
-            const operation = 'admin-courses'
-
-            const result: any = await courseRabbitMqClient.produce(data,operation)
-
-            console.log(result, 'admin result ------------- total-------courses ');
-
-            return res.json(result)
-            
+            // Prepare the gRPC request data from req.query
+            const data = req.query;
+    
+            // Call the gRPC function adminClient.allCourse
+            courseClient.allCourses(data, (error: any, result: any) => {
+                if (error) {
+                    console.error("Error in adminClient.allCourse:", error);
+                    return res.status(500).json({
+                        success: false,
+                        message: "Internal Server Error. Please try again later.",
+                    });
+                }
+    
+                console.log(result, "admin result ------------- total-------courses ");
+                return res.json(result);
+            });
         } catch (error) {
-            return res.status(500).json({
-                success: false,
-                message: "Internal Server Error. Please try again later."
-            })
+            console.error("Error in courses function:", error);
         }
     },
 

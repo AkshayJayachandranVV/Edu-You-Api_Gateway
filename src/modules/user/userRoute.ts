@@ -39,5 +39,6 @@ userRouter.get('/fetchGroupMembers',authencticateToken('user'),useController.fet
 userRouter.post('/refresh-token',useController.validateToken)
 userRouter.post('/reviewPost',authencticateToken('user'),useController.reviewPost)
 userRouter.get('/fetchReview/:courseId',authencticateToken('user'),useController.fetchReview)
+userRouter.get('/fetchTutor/:courseId',authencticateToken('user'),useController.fetchTutor)
 export {userRouter}
 
