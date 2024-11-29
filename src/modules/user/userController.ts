@@ -677,7 +677,7 @@ export const useController = {
     }
   },
 
-  
+
 
   fetchChat: async (req: Request, res: Response) => {
     const isS3Key = (key: string) => {
@@ -763,30 +763,54 @@ export const useController = {
         "my courseeeeeeee ------------------------------",
         req.params
       );
-
-      const operation = "user-myCourse";
-
+  
       const data = req.params;
-      // Fetch the chat data
-      const result: any = await userRabbitMqClient.produce(data, operation);
-
-      console.log(result, "result1");
-
-      const operation2 = "fetch-user-myCourse";
-
-      const result2: any = await courseRabbitMqClient.produce(
-        result,
-        operation2
-      );
-
-      // console.log(result2, "------------result 2");
-
-      return res.json(result2);
+  
+      // Wrap the gRPC call in a Promise for cleaner async/await handling
+      const grpcCall = () =>
+        new Promise<any>((resolve, reject) => {
+          userClient.myCourse(data, (err: any, result: any) => {
+            if (err) {
+              console.error("gRPC error:", err);
+              reject(new Error("Failed to fetch course details from gRPC."));
+            } else {
+              resolve(result);
+            }
+          });
+        });
+  
+      // Perform the gRPC call to get user courses
+      const grpcResult = await grpcCall();
+      console.log("gRPC result MYCourse:", grpcResult);
+  
+      // Now replace RabbitMQ with courseClient.myCourseFetch
+      const courseGrpcCall = () =>
+        new Promise<any>((resolve, reject) => {
+          courseClient.myCourseFetch({ courses: grpcResult.courses }, (err: any, result: any) => {
+            if (err) {
+              console.error("gRPC error in courseClient.myCourseFetch:", err);
+              reject(new Error("Failed to fetch course details from gRPC."));
+            } else {
+              resolve(result);
+            }
+          });
+        });
+  
+      // Perform the gRPC call to fetch course details from courseClient
+      const courseGrpcResult = await courseGrpcCall();
+      console.log("Course gRPC result:", courseGrpcResult);
+  
+      // Return the course details
+      return res.json(courseGrpcResult);
+  
     } catch (error) {
-      console.log(error, "error in fetchChat");
+      console.error("Error in myCourse:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
   },
+
+
+
 
   courseView: async (req: Request, res: Response) => {
     try {

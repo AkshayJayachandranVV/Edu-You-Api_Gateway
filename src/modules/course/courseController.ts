@@ -48,6 +48,7 @@ export const courseController ={
                 message: "Internal Server Error. Please try again later.",
               });
             }
+            console.log(response)
             return res.json(response);
           });
         } catch (error) {

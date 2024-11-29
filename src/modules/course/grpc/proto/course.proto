@@ -8,7 +8,25 @@ service CourseService {
   rpc allCourses (pagination) returns (CourseResponse);
   rpc courseDetails (CourseDetailRequest) returns (CourseDetailResponse);
   rpc fetchReview (CourseDetailRequest) returns (CourseDetailResponse);  
+  rpc myCourseFetch (MyCoursesRequest) returns (myCourseFetchResponse);
 }
+
+
+message myCourseFetchResponse {
+  bool success = 1;                 
+  repeated Course courses = 2;    // List of courses
+}
+
+message MyCoursesRequest {
+  bool success = 1;                 
+  repeated MyCourse courses = 2;    
+}
+
+
+message MyCourse {
+  string courseId = 1; 
+}
+
 
 // Pagination message
 message pagination {
@@ -54,6 +72,7 @@ message Course {
   repeated Student students = 15;  // List of enrolled students
   string createdAt = 16;  // Course creation date (timestamp)
   string updatedAt = 17;  // Last updated date (timestamp)
+  double averageRating = 18;
 }
 
 // Section message (for sections in the course)
