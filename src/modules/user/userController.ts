@@ -491,68 +491,46 @@ export const useController = {
     }
   },
 
-    courseDetails: async (req: Request, res: Response) => {
-      try {
-        console.log("Entered ---------- user0",req.params);
-  
-        const { courseId } = req.params;
-  
-        // Create the request payload
-        const requestPayload = { courseId };
-  
-        // Call the gRPC method
-        courseClient.courseDetails(requestPayload, (err: any, response: any) => {
-          if (err) {
-            console.error("gRPC error:", err);
-            return res.status(500).json({
-              success: false,
-              message: "Failed to fetch course details.",
-            });
-          }
-
-          console.log("kitty poyi",response)
-  
-          // Handle successful gRPC response
-          return res.json(response);
-        });
-      } catch (error) {
-        console.error("Internal Server Error:", error);
-        return res.status(500).json({
-          success: false,
-          message: "Internal Server Error. Please try again later.",
-        });
-      }
-    },
-  
-
-
-
-   allCourses : async (req: Request, res: Response) => {
+  courseDetails: async (req: Request, res: Response) => {
     try {
-      // Log entry for debugging
-      console.log("Entered allCourses function--");
-  
-      // Prepare the gRPC request data if required
-      const requestPayload = req.query; // Use an empty object for no input
-  
-      // Call the gRPC method
-      courseClient.allCourses(requestPayload, (err: any, result: any) => {
-        if (err) {
-          console.error("gRPC Error:", err);
-  
-          // Return error response to the client
-          return res.status(500).json({
-            success: false,
-            message: err.message || "Internal Server Error. Please try again later.",
-          });
-        }
-  
-        return res.json(result);
-      });
+      console.log("Entered to the courseDetails user");
+
+      const { courseId } = req.params;
+
+      const data = {
+        courseId: courseId,
+      };
+
+      const operation = "course-details";
+
+      const result: any = await courseRabbitMqClient.produce(data, operation);
+
+      // console.log(result, "course-------details ----------user ");
+
+      return res.json(result);
     } catch (error) {
-      console.error("Unexpected Error:", error);
-  
-      // Handle unexpected errors
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error. Please try again later.",
+      });
+    }
+  },
+
+
+
+  allCourses: async (req: Request, res: Response) => {
+    try {
+      // console.log("Entered to the all courses user");
+      const data = "";
+
+      const operation = "all-courses";
+
+      const result: any = await courseRabbitMqClient.produce(data, operation);
+
+      // console.log(result, "course-------details ----------user ");
+
+      return res.json(result);
+    } catch (error) {
       return res.status(500).json({
         success: false,
         message: "Internal Server Error. Please try again later.",
@@ -763,48 +741,27 @@ export const useController = {
         "my courseeeeeeee ------------------------------",
         req.params
       );
-  
+
+      const operation = "user-myCourse";
+
       const data = req.params;
-  
-      // Wrap the gRPC call in a Promise for cleaner async/await handling
-      const grpcCall = () =>
-        new Promise<any>((resolve, reject) => {
-          userClient.myCourse(data, (err: any, result: any) => {
-            if (err) {
-              console.error("gRPC error:", err);
-              reject(new Error("Failed to fetch course details from gRPC."));
-            } else {
-              resolve(result);
-            }
-          });
-        });
-  
-      // Perform the gRPC call to get user courses
-      const grpcResult = await grpcCall();
-      console.log("gRPC result MYCourse:", grpcResult);
-  
-      // Now replace RabbitMQ with courseClient.myCourseFetch
-      const courseGrpcCall = () =>
-        new Promise<any>((resolve, reject) => {
-          courseClient.myCourseFetch({ courses: grpcResult.courses }, (err: any, result: any) => {
-            if (err) {
-              console.error("gRPC error in courseClient.myCourseFetch:", err);
-              reject(new Error("Failed to fetch course details from gRPC."));
-            } else {
-              resolve(result);
-            }
-          });
-        });
-  
-      // Perform the gRPC call to fetch course details from courseClient
-      const courseGrpcResult = await courseGrpcCall();
-      console.log("Course gRPC result:", courseGrpcResult);
-  
-      // Return the course details
-      return res.json(courseGrpcResult);
-  
+      // Fetch the chat data
+      const result: any = await userRabbitMqClient.produce(data, operation);
+
+      console.log(result, "result1");
+
+      const operation2 = "fetch-user-myCourse";
+
+      const result2: any = await courseRabbitMqClient.produce(
+        result,
+        operation2
+      );
+
+      // console.log(result2, "------------result 2");
+
+      return res.json(result2);
     } catch (error) {
-      console.error("Error in myCourse:", error);
+      console.log(error, "error in fetchChat");
       return res.status(500).json({ message: "Internal server error" });
     }
   },

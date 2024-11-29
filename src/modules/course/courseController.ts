@@ -35,30 +35,28 @@ export const courseController ={
     },
 
 
-    userCourse : async (req: Request, res: Response) => {
-        try {
-          console.log("Entered the course part ---------------------");
-      
+    userCourse : async(req : Request, res : Response) => {
+      try {
           
-          courseClient.userCourse({}, (err: grpc.ServiceError | null, response: any) => {
-            if (err) {
-              console.error("gRPC Error: ", err);
-              return res.status(500).json({
-                success: false,
-                message: "Internal Server Error. Please try again later.",
-              });
-            }
-            console.log(response)
-            return res.json(response);
-          });
-        } catch (error) {
-          console.error("Unexpected error:", error);
+          console.log("entered --------------------- to the course part")
+          const operation ='user-course'
+
+
+
+          const result: any = await courseRabbitMqClient.produce("",operation)
+
+          console.log(result, 'course result ---------upload thumbnail ');
+
+          return res.json(result)
+          
+      } catch (error) {
           return res.status(500).json({
-            success: false,
-            message: "Internal Server Error. Please try again later.",
-          });
-        }
-      },
+              success: false,
+              message: "Internal Server Error. Please try again later."
+          })
+      }
+  }, 
+  
 
     editCourse : async(req : Request, res : Response) => {
         try {
