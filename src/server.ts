@@ -10,9 +10,11 @@ import { tutorRouter } from './modules/tutor/tutorRoute';
 import { adminRouter } from './modules/admin/adminRoute';
 import { courseRouter } from './modules/course/courseRoute';
 import { initializeSocket } from './socket/socketServer'; // Import the socket initializer
+import  morgan from 'morgan';
 
 dotenv.config();
 const app = express();
+app.use(morgan('dev')); 
 
 const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allowed?: boolean) => void) => {

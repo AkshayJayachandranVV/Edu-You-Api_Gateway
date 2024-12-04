@@ -521,7 +521,7 @@ export const useController = {
   allCourses: async (req: Request, res: Response) => {
     try {
       // console.log("Entered to the all courses user");
-      const data = "";
+      const data = req.query;
 
       const operation = "all-courses";
 
