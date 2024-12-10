@@ -527,9 +527,26 @@ export const tutorController = {
 
   listCourse: async (req: Request, res: Response) => {
     try {
-      console.log("my courses tutor", req.query);
+      console.log("my courses tutor listinhg", req.query);
       const data = req.query;
       const operation = "tutor-courses-list";
+
+
+      const result: any = await courseRabbitMqClient.produce(data, operation);
+      console.log("resuylteeee", result);
+
+      return res.json(result);
+    } catch (error) {
+      console.log(error, "error in google login");
+    }
+  },  
+
+
+  listUnlist: async (req: Request, res: Response) => {
+    try {
+      console.log("my courses tutor listinhg", req.params);
+      const data = req.params;
+      const operation = 'list-unlist-course';
 
 
       const result: any = await courseRabbitMqClient.produce(data, operation);

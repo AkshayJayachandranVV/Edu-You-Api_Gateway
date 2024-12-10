@@ -354,11 +354,11 @@ export const initializeSocket = (server: http.Server) => {
       try {
         console.log("Entered readMessages, broadcasting to room:", roomId,userId);
         const operation = "update-read-users";
-        const result: any = await chatRabbitMqClient.produce(
-          { userId: socket.data.userId },
-          operation
-        );
-        console.log("ANGHANA UNREAD", result);
+        // const result: any = await chatRabbitMqClient.produce(
+        //   { userId: socket.data.userId },
+        //   operation
+        // );
+        // console.log("ANGHANA UNREAD", result);
         
       } catch (error) {
         console.error("Error updating read status:", error);
