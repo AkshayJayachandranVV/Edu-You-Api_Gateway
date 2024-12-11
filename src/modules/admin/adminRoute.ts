@@ -12,12 +12,13 @@ adminRouter.get("/students", authenticationToken('admin'), adminController.stude
 adminRouter.post("/isBlocked", authenticationToken('admin'), adminController.isBlocked);
 adminRouter.get("/tutors", authenticationToken('admin'), adminController.tutors);
 adminRouter.post("/tutorIsBlocked", authenticationToken('admin'), adminController.tutorsIsBlocked);
-adminRouter.get("/courses", authenticationToken('admin'), adminController.courses);
+adminRouter.get("/courses", authenticationToken('admin'), adminController.listCourses);
 adminRouter.post("/listCourse", authenticationToken('admin'), adminController.listCourses);
 adminRouter.get("/reportCourses", authenticationToken('admin'), adminController.reportCourses);
 adminRouter.get("/payouts", authenticationToken('admin'), adminController.payouts);
 adminRouter.get("/graphData", authenticationToken('admin'), adminController.graphData);
 adminRouter.get("/cardsData", authenticationToken('admin'), adminController.cardsData);
+adminRouter.get("/listUnlist/:courseId", authenticationToken('admin'), adminController.listUnlist);
 adminRouter.post('/refresh-token',adminController.validateToken)
 export { adminRouter };
 

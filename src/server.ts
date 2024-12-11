@@ -18,7 +18,7 @@ app.use(morgan('dev'));
 
 const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allowed?: boolean) => void) => {
-    if (!origin  || origin === "http://localhost:5173") {
+    if (!origin  || origin == 'http://localhost:5173') {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -60,6 +60,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-
-// || origin === "https://eduyou.site"

@@ -31,6 +31,7 @@ tutorRouter.get('/courseView/:courseId',authencticateToken('tutor'),tutorControl
 tutorRouter.get("/getCourses/:userId",authencticateToken('tutor'),tutorController.getUserCourses)
 tutorRouter.get("/profileDetails/:tutorId",authencticateToken('tutor'),tutorController.profileDetails)
 tutorRouter.get("/listUnlist/:courseId",authencticateToken('tutor'),tutorController.listUnlist)
+tutorRouter.get("/getTutorCourses/:userId",authencticateToken('tutor'),tutorController.getTutorCourses)
 tutorRouter.post('/refresh-token',tutorController.validateToken)
 
 export {tutorRouter}

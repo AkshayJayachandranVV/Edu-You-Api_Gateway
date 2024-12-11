@@ -205,6 +205,100 @@ export const initializeSocket = (server: http.Server) => {
       }
     );
 
+
+
+    socket.on(
+      "sendMessageToTutor",
+      async ({
+        roomId,
+        senderId,
+        content,
+      }: {
+        roomId: string;
+        senderId: string;
+        content: string;
+      }) => {
+        console.log(
+          `Simplified message received. RoomId: ${roomId}, SenderId: ${senderId}, Content: ${content}`
+        );
+
+
+        console.log("enetered tutor",roomId,senderId,content)
+    
+        try {
+          interface ResponseType {
+            _id: string;
+            isRead: boolean;
+          }
+    
+          // Save the message directly using RabbitMQ or your database logic
+          const operation = "save-message";
+          const message = { roomId, senderId, content };
+          const response = (await chatRabbitMqClient.produce(
+            message,
+            operation
+          )) as ResponseType;
+    
+          const responseId = response._id;
+          const isRead = response.isRead;
+
+
+          console.log("tutor chat --------")
+    
+          // Directly emit the message to the room without fetching additional details
+          socket.to(roomId).emit("receiveMessageTutor", {
+            isRead: isRead,
+            messageId: responseId,
+            content: content, // Optionally handle file paths for S3 or other transformations if needed
+            senderId: senderId, // Include senderId for reference if necessary
+          });
+    
+          console.log("Message successfully sent to room:", roomId);
+        } catch (error) {
+          console.error("Error handling sendMessageToRoom:", error);
+        }
+      }
+    );
+
+
+
+    socket.on(
+      "sendTutorMedia",
+      async ({ roomId, senderId, mediaUrl, mediaType }) => {
+        console.log("Sending media:", { roomId, senderId, mediaUrl, mediaType });
+    
+        try {
+          // Save the media message directly
+          const operation = "save-media";
+          const mediaMessage = { roomId, senderId, mediaUrl, mediaType };
+    
+          // Assuming `chatRabbitMqClient` saves the media and returns the message details
+          const response = await chatRabbitMqClient.produce(
+            mediaMessage,
+            operation
+          ) as { _id: string; isRead: boolean };
+    
+          const responseId = response._id;
+          const isRead = response.isRead;
+    
+          // Emit the media message to the room
+          socket.to(roomId).emit("receiveTutorMedia", {
+            isRead,
+            messageId: responseId,
+            mediaUrl,
+            mediaType,
+            senderId, // Include senderId for reference if needed
+          });
+    
+          console.log("Media message sent successfully:", responseId);
+        } catch (error) {
+          console.error("Error in sendTutorMedia:", error);
+        }
+      }
+    );
+    
+    
+
     // New event to handle media sending
     socket.on(
       "sendMedia",

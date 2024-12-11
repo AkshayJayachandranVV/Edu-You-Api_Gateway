@@ -18,7 +18,7 @@ const tutorProtoDescription = grpc.loadPackageDefinition(tutorPackageDefinition)
 const userProto = tutorProtoDescription.tutor;
 
 const tutorClient = new userProto.TutorService(
-    '0.0.0.0:4002',
+    config.grpc_tutor_url,
     grpc.credentials.createInsecure()
 );
 
@@ -27,4 +27,3 @@ export { tutorClient };
 
 
 
-"eduyou-tutor-service:40002"

@@ -1018,4 +1018,41 @@ export const tutorController = {
       });
     }
   },
+
+
+
+  getTutorCourses: async (req: Request, res: Response) => {
+    try {
+      console.log("my courses tutor", req.params);
+      const { userId } = req.params;
+      const operation1 = "tutor-my-course";
+
+      const data = {
+        userId: userId,
+      };
+      const result1: any = await tutorRabbitMqClient.produce(data, operation1);
+      // console.log("resuylteeee----------------------------------------11111111111111111111111111111111111111111", result1);
+
+      const operation2 = "fetch-course-myCourse";
+      const result2: any = await courseRabbitMqClient.produce(
+        result1,
+        operation2
+      );
+      // console.log("resuylteeee-----------------------------------------2222222222222222222222222222222222222222", result2);
+
+      const operation3 = 'fetch-last-message'
+
+      const result3 = await chatRabbitMqClient.produce(result2.courses,operation3)
+   
+
+      // console.log(result3)
+
+      return res.json(result3);
+    } catch (error) {
+      console.log(error, "error in google login");
+    }
+  },
+
+
+
 };

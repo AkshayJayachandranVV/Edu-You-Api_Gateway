@@ -27,4 +27,3 @@ export { userClient };
 
 
 
-// 'eduyou-user-service:40001'

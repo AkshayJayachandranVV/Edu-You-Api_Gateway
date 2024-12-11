@@ -248,9 +248,9 @@ export const adminController ={
     
             const operation = 'admin-courses-list'
 
-            console.log(req.body,"---------------req.body in listCourses")
+            console.log(req.query,"---------------req.body in listCourses")
 
-            const data = req.body
+            const data = req.query
 
             const result: any = await courseRabbitMqClient.produce(data,operation)
 
@@ -265,6 +265,7 @@ export const adminController ={
             })
         }
     },
+    
 
 
     reportCourses : async(req : Request, res : Response) => {
@@ -440,6 +441,24 @@ export const adminController ={
             res.status(500).json({ error: "Failed to retrieve tutor data" });
         }
     },
+
+
+    listUnlist: async (req: Request, res: Response) => {
+        try {
+          console.log("my courses tutor listinhg", req.params);
+          const data = req.params;
+          const operation = 'list-unlist-course';
+    
+    
+          const result: any = await courseRabbitMqClient.produce(data, operation);
+          console.log("resuylteeee", result);
+    
+          return res.json(result);
+        } catch (error) {
+          console.log(error, "error in google login");
+        }
+      },
+    
 
 
 }
